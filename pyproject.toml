@@ -77,7 +77,7 @@ convention = "google"
 quote-style = "double"
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "scripts"]
 typeCheckingMode = "basic"
 useLibraryCodeForTypes = true
 
@@ -103,4 +103,15 @@ dev = [
     "pre-commit>=4.6.0",
     "pyright>=1.1.409",
     "testcontainers[postgres]",
+]
+# Data drift analysis tooling (scripts/, notebooks/) — kept out of the default
+# dev sync so routine lint/test/pyright runs don't pay Evidently's heavier
+# install cost. Sync explicitly with `uv sync --extra api --group drift`.
+drift = [
+    "pyarrow",
+    "evidently",
+    "huggingface_hub",
+    "typer",
+    "jupyter",
+    "ipykernel",
 ]

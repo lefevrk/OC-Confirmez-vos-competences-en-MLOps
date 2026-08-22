@@ -36,6 +36,11 @@ logs/
 # MLflow (local runs, if used ad hoc)
 mlruns/
 
+# Drift analysis working data (downloaded reference, Postgres exports) —
+# derived/reproducible, not committed. Fixtures under scripts/k6/fixtures/
+# are intentionally excluded from this rule (committed).
+data/
+
 # Docs build
 site/
 
