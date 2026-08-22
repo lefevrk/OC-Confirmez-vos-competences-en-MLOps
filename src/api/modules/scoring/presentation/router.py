@@ -5,6 +5,12 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from loguru import logger
 
 from api.infra.config import get_settings
+from api.infra.metrics import (
+    INFERENCE_LATENCY,
+    POSTGRES_ERRORS,
+    PREDICTION_DECISIONS,
+    PREDICTION_SCORE,
+)
 from api.modules.scoring.ports.model import ScoringModel
 from api.modules.scoring.ports.prediction_recorder import PredictionRecorder
 from api.modules.scoring.presentation.schemas import PredictionRequest, PredictionResponse
@@ -48,6 +54,7 @@ def get_recorder(request: Request) -> PredictionRecorder:
     """Return the prediction recorder connected at startup. Returns 503 if unavailable."""
     recorder = request.app.state.prediction_recorder
     if recorder is None:
+        POSTGRES_ERRORS.inc()
         logger.warning("prediction_rejected_recorder_unavailable")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="storage unavailable"
@@ -68,6 +75,11 @@ def create_prediction(
 ) -> PredictionResponse:
     """Score validated input with the model loaded during application startup."""
     result = predict(model, recorder, payload.model_features())
+
+    INFERENCE_LATENCY.observe(result.inference_latency_ms / 1_000)
+    PREDICTION_SCORE.observe(result.probability)
+    PREDICTION_DECISIONS.labels(decision="refused" if result.decision else "accepted").inc()
+
     return PredictionResponse(
         prediction_id=result.prediction_id,
         probability=result.probability,

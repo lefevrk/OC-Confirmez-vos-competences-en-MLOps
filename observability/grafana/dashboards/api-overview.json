@@ -1,0 +1,556 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "🧬 Model Health — what is the model actually predicting?",
+      "type": "row",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 2,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "sum(rate(credit_scoring_prediction_probability_count{environment=\"$environment\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Predictions / s",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 3,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "rate(credit_scoring_prediction_probability_sum{environment=\"$environment\"}[$__rate_interval]) / rate(credit_scoring_prediction_probability_count{environment=\"$environment\"}[$__rate_interval])",
+          "refId": "A"
+        }
+      ],
+      "title": "Mean predicted probability",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 4,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "sum(rate(credit_scoring_prediction_decisions_total{environment=\"$environment\",decision=\"refused\"}[$__rate_interval])) / sum(rate(credit_scoring_prediction_decisions_total{environment=\"$environment\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Refusal rate",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "In-memory model compute only — no network, no serialization. See the Serving Performance section below for the full HTTP round trip.",
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 5,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(credit_scoring_inference_duration_seconds_bucket{environment=\"$environment\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "Inference p95",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 6,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(credit_scoring_inference_duration_seconds_bucket{environment=\"$environment\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "Inference p99",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "mappings": [{ "type": "value", "options": {} }] },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 7,
+      "options": {
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "targets": [
+        {
+          "expr": "credit_scoring_model_info{environment=\"$environment\"}",
+          "legendFormat": "{{model_alias}} — v{{model_version}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Model loaded",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Heatmap of the predicted-probability histogram over time. A band that shifts, or collapses into a single row, means the model's live output changed — worth comparing against the training-time reference distribution, which lives in MLflow/the training pipeline, not in Grafana.",
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 9, "w": 10, "x": 0, "y": 5 },
+      "id": 8,
+      "options": {
+        "calculate": false,
+        "yAxis": { "unit": "percentunit", "decimals": 2 },
+        "rowsFrame": { "layout": "le" },
+        "color": { "mode": "scheme", "scheme": "Spectral", "steps": 64 },
+        "cellGap": 1,
+        "tooltip": { "show": true, "yHistogram": false },
+        "legend": { "show": false }
+      },
+      "targets": [
+        {
+          "expr": "sum by (le) (increase(credit_scoring_prediction_probability_bucket{environment=\"$environment\"}[$__rate_interval]))",
+          "format": "heatmap",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Predicted score distribution over time",
+      "type": "heatmap"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Decision volume over time, stacked accepted/refused — a shift in mix is visible immediately, not just in the running total.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "stacking": { "mode": "normal" }, "fillOpacity": 40 }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "refused" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "accepted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 10, "y": 5 },
+      "id": 9,
+      "targets": [
+        {
+          "expr": "sum by (decision) (rate(credit_scoring_prediction_decisions_total{environment=\"$environment\"}[$__rate_interval]))",
+          "legendFormat": "{{decision}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Decision volume / s",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "min": 0,
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Refused" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] },
+          { "matcher": { "id": "byName", "options": "Accepted" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 6, "x": 18, "y": 5 },
+      "id": 10,
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "targets": [
+        {
+          "expr": "100 * sum(increase(credit_scoring_prediction_decisions_total{environment=\"$environment\",decision=\"accepted\"}[$__range])) / sum(increase(credit_scoring_prediction_decisions_total{environment=\"$environment\"}[$__range]))",
+          "legendFormat": "Accepted",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "expr": "100 * sum(increase(credit_scoring_prediction_decisions_total{environment=\"$environment\",decision=\"refused\"}[$__range])) / sum(increase(credit_scoring_prediction_decisions_total{environment=\"$environment\"}[$__range]))",
+          "legendFormat": "Refused",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        }
+      ],
+      "title": "Decision mix (visible window)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Model compute time only (in-memory), separate from the full HTTP round trip below — this is what the model itself costs.",
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 14 },
+      "id": 11,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(credit_scoring_inference_duration_seconds_bucket{environment=\"$environment\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(credit_scoring_inference_duration_seconds_bucket{environment=\"$environment\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(credit_scoring_inference_duration_seconds_bucket{environment=\"$environment\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "title": "Inference latency (p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
+      "id": 12,
+      "title": "⚙️ Serving Performance — is the API fast, reachable, and healthy?",
+      "type": "row",
+      "gridPos": { "x": 0, "y": 22, "w": 24, "h": 1 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 23 },
+      "id": 13,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(credit_scoring_http_request_duration_seconds_bucket{environment=\"$environment\",endpoint=\"/predictions\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP p50",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 23 },
+      "id": 14,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(credit_scoring_http_request_duration_seconds_bucket{environment=\"$environment\",endpoint=\"/predictions\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP p95",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 23 },
+      "id": 15,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(credit_scoring_http_request_duration_seconds_bucket{environment=\"$environment\",endpoint=\"/predictions\"}[$__rate_interval])))",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP p99",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 23 },
+      "id": 16,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "sum(rate(credit_scoring_http_requests_total{environment=\"$environment\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Requests / s",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 23 },
+      "id": 17,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "100 * sum(rate(credit_scoring_http_errors_total{environment=\"$environment\"}[$__rate_interval])) / sum(rate(credit_scoring_http_requests_total{environment=\"$environment\"}[$__rate_interval]))",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP error rate",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 23 },
+      "id": 18,
+      "options": { "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{environment=\"$environment\"}[$__rate_interval])) * 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Total CPU (app containers)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Full HTTP round trip (network + serialization + inference). Compare against the Model Health section's inference-only chart to see whether slowness is inside the model or around it.",
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 14, "x": 0, "y": 27 },
+      "id": 19,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(credit_scoring_http_request_duration_seconds_bucket{environment=\"$environment\",endpoint=\"/predictions\"}[$__rate_interval])))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(credit_scoring_http_request_duration_seconds_bucket{environment=\"$environment\",endpoint=\"/predictions\"}[$__rate_interval])))",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(credit_scoring_http_request_duration_seconds_bucket{environment=\"$environment\",endpoint=\"/predictions\"}[$__rate_interval])))",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ],
+      "title": "HTTP latency — /predictions (p50/p95/p99)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "MLflow is only contacted once, at process startup, to load the champion model — not on the request path. This is a startup health check, not a live rate: it stays at 0 unless this instance failed to load its model on boot.",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 5, "x": 14, "y": 27 },
+      "id": 20,
+      "options": { "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "sum(credit_scoring_mlflow_errors_total{environment=\"$environment\"})",
+          "refId": "A"
+        }
+      ],
+      "title": "MLflow startup errors",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "description": "Unlike MLflow, PostgreSQL is on the request path (each prediction is logged) — a rate here is a real, ongoing dependency signal.",
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 5, "x": 19, "y": 27 },
+      "id": 21,
+      "targets": [
+        {
+          "expr": "rate(credit_scoring_postgres_errors_total{environment=\"$environment\"}[$__rate_interval])",
+          "legendFormat": "postgres errors/s",
+          "refId": "A"
+        }
+      ],
+      "title": "PostgreSQL error rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 35 },
+      "id": 22,
+      "targets": [
+        {
+          "expr": "sum by (endpoint) (rate(credit_scoring_http_requests_total{environment=\"$environment\"}[$__rate_interval]))",
+          "legendFormat": "{{endpoint}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Throughput by endpoint",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 35 },
+      "id": 23,
+      "targets": [
+        {
+          "expr": "sum by (status_code) (rate(credit_scoring_http_errors_total{environment=\"$environment\"}[$__rate_interval]))",
+          "legendFormat": "{{status_code}}",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP errors (4xx/5xx)",
+      "type": "timeseries"
+    },
+    {
+      "id": 24,
+      "title": "🖥️ Infrastructure — containers, cAdvisor via Alloy (collapsed — expand to load)",
+      "type": "row",
+      "gridPos": { "x": 0, "y": 43, "w": 24, "h": 1 },
+      "collapsed": true,
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "percent" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 0, "y": 44 },
+          "id": 25,
+          "targets": [
+            {
+              "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{environment=\"$environment\"}[$__rate_interval])) * 100",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "title": "CPU per container (%)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "bytes" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 8, "y": 44 },
+          "id": 26,
+          "targets": [
+            {
+              "expr": "sum by (name) (container_memory_usage_bytes{environment=\"$environment\"})",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Memory per container",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 8, "x": 16, "y": 44 },
+          "id": 27,
+          "targets": [
+            {
+              "expr": "sum by (name) (rate(container_fs_reads_bytes_total{environment=\"$environment\"}[$__rate_interval]))",
+              "legendFormat": "{{name}} read",
+              "refId": "A"
+            },
+            {
+              "expr": "sum by (name) (rate(container_fs_writes_bytes_total{environment=\"$environment\"}[$__rate_interval]))",
+              "legendFormat": "{{name}} write",
+              "refId": "B"
+            }
+          ],
+          "title": "Disk I/O per container",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 52 },
+          "id": 28,
+          "targets": [
+            {
+              "expr": "sum by (name) (rate(container_network_receive_bytes_total{environment=\"$environment\"}[$__rate_interval]))",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Network RX per container",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": { "defaults": { "unit": "Bps" }, "overrides": [] },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 52 },
+          "id": 29,
+          "targets": [
+            {
+              "expr": "sum by (name) (rate(container_network_transmit_bytes_total{environment=\"$environment\"}[$__rate_interval]))",
+              "legendFormat": "{{name}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Network TX per container",
+          "type": "timeseries"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": ["credit-scoring"],
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "label": "Environment",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(up, environment)", "refId": "environment" },
+        "refresh": 2,
+        "sort": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {}
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Credit scoring API",
+  "uid": "credit-scoring-api",
+  "version": 7
+}

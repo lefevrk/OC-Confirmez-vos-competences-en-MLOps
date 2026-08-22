@@ -7,7 +7,7 @@ packages = ["src/api"]
 
 [project]
 name = "credit-scoring-api"
-version = "0.2.1"
+version = "0.3.0"
 description = "Credit scoring API — inference service (MLOps deployment repo)"
 authors = [
   { name = "Kilian LEFEVRE" },

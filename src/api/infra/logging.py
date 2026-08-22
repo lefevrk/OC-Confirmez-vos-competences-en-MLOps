@@ -1,7 +1,9 @@
-"""Loguru configuration for readable stdout logs."""
+"""Loguru configuration for structured JSON stdout logs."""
 
 import inspect
+import json
 import logging
+import traceback
 
 from loguru import logger
 
@@ -24,27 +26,30 @@ class _InterceptHandler(logging.Handler):
         logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-def _format_line(record: dict) -> str:
-    """Render one log record as a single readable line, bound fields included.
+def _json_line(record: dict) -> str:
+    """Render one log record as a single JSON line, bound fields included.
 
-    A plain "timestamp | LEVEL | message key=value ..." line reads naturally
-    in a terminal or `docker logs`. Structured JSON only earns its keep once
-    a log pipeline needs to parse it (Alloy/Loki, a later step) — until then
-    it's just noise to read by eye.
+    A log pipeline (Alloy/Loki, see deploy/alloy/config.alloy) needs to
+    parse fields without a fragile ad hoc format — that's what JSON is for.
     """
-    extras = " ".join(f"{key}={value}" for key, value in record["extra"].items())
-    timestamp = record["time"].strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-    line = f"{timestamp} | {record['level'].name:<8} | {record['message']}"
-    return f"{line} {extras}" if extras else line
+    payload = {
+        "timestamp": record["time"].isoformat(),
+        "level": record["level"].name,
+        "message": record["message"],
+        **record["extra"],
+    }
+    if record["exception"] is not None:
+        payload["exception"] = "".join(traceback.format_exception(*record["exception"]))
+    return json.dumps(payload, default=str)
 
 
 def _sink(message) -> None:
-    """Write one formatted record to stdout."""
-    print(_format_line(message.record))
+    """Write one JSON-formatted record to stdout."""
+    print(_json_line(message.record))
 
 
 def configure_logging(level: str = "INFO") -> None:
-    """Configure Loguru to emit readable logs, including from stdlib logging.
+    """Configure Loguru to emit structured JSON logs, including from stdlib logging.
 
     Redirects every standard-library logger (uvicorn's included) through
     Loguru so the whole process emits one consistent format instead of a mix

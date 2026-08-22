@@ -8,9 +8,20 @@ from tests.payloads import valid_payload
 from api.app import app
 import api.infra.config as config_module
 from api.infra.config import get_settings
+from api.infra.metrics import INFERENCE_LATENCY, PREDICTION_DECISIONS, PREDICTION_SCORE
 from api.infra.postgres.models import PredictionEventRecord
 from api.infra.postgres.tracking import PostgresPredictionRecorder
 from api.modules.scoring.presentation.schemas import PredictionRequest
+
+
+def _sample_value(metric, suffix: str = "", **labels: str) -> float:
+    """Read one Prometheus sample through the metric's public collect() API."""
+    family = next(iter(metric.collect()))
+    name = family.name + suffix
+    for sample in family.samples:
+        if sample.name == name and sample.labels == labels:
+            return sample.value
+    return 0.0
 
 
 class DeterministicModel:
@@ -121,6 +132,22 @@ def test_prediction_succeeds_without_a_token_when_authentication_is_disabled() -
     assert body["decision"] == 1
     assert body["model_version"] == "3"
     assert body["prediction_id"]
+
+
+def test_prediction_records_ml_metrics() -> None:
+    """A successful prediction increments the ML-facing Prometheus metrics."""
+    decisions_before = _sample_value(PREDICTION_DECISIONS, "_total", decision="refused")
+    score_count_before = _sample_value(PREDICTION_SCORE, "_count")
+    inference_count_before = _sample_value(INFERENCE_LATENCY, "_count")
+
+    with TestClient(app) as client:
+        client.post("/predictions", json=valid_payload())
+
+    assert _sample_value(PREDICTION_DECISIONS, "_total", decision="refused") == (
+        decisions_before + 1
+    )
+    assert _sample_value(PREDICTION_SCORE, "_count") == score_count_before + 1
+    assert _sample_value(INFERENCE_LATENCY, "_count") == inference_count_before + 1
 
 
 def test_prediction_persists_to_a_real_database(monkeypatch) -> None:

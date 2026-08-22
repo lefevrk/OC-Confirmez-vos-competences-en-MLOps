@@ -1,5 +1,6 @@
-"""Unit tests for the readable log format used locally."""
+"""Unit tests for the structured JSON log format used by the API."""
 
+import json
 import logging
 
 from loguru import logger
@@ -7,17 +8,31 @@ from loguru import logger
 from api.infra.logging import configure_logging
 
 
-def test_configure_logging_emits_a_readable_line_with_bound_fields(capsys) -> None:
-    """A bound log call produces one readable line with its extra fields appended."""
+def test_configure_logging_emits_one_json_line_with_bound_fields(capsys) -> None:
+    """A bound log call produces one JSON line with its extra fields included."""
     configure_logging()
 
     logger.bind(request_id="abc-123", latency_ms=4.2).info("prediction served")
 
-    line = capsys.readouterr().out.strip()
-    assert "INFO" in line
-    assert "prediction served" in line
-    assert "request_id=abc-123" in line
-    assert "latency_ms=4.2" in line
+    record = json.loads(capsys.readouterr().out.strip())
+    assert record["level"] == "INFO"
+    assert record["message"] == "prediction served"
+    assert record["request_id"] == "abc-123"
+    assert record["latency_ms"] == 4.2
+
+
+def test_configure_logging_includes_the_traceback_on_logger_exception(capsys) -> None:
+    """logger.exception(...) keeps its traceback, not just the bare message."""
+    configure_logging()
+
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        logger.exception("unhandled_exception")
+
+    record = json.loads(capsys.readouterr().out.strip())
+    assert record["level"] == "ERROR"
+    assert "ValueError: boom" in record["exception"]
 
 
 def test_configure_logging_respects_the_requested_level(capsys) -> None:
@@ -37,9 +52,9 @@ def test_configure_logging_intercepts_stdlib_logging(capsys) -> None:
 
     logging.getLogger("uvicorn.error").info("Uvicorn running on http://0.0.0.0:8000")
 
-    line = capsys.readouterr().out.strip()
-    assert "INFO" in line
-    assert "Uvicorn running on http://0.0.0.0:8000" in line
+    record = json.loads(capsys.readouterr().out.strip())
+    assert record["level"] == "INFO"
+    assert record["message"] == "Uvicorn running on http://0.0.0.0:8000"
 
 
 def test_configure_logging_relays_a_level_unknown_to_loguru(capsys) -> None:
@@ -48,4 +63,5 @@ def test_configure_logging_relays_a_level_unknown_to_loguru(capsys) -> None:
 
     logging.getLogger("custom").log(25, "custom level message")
 
-    assert "custom level message" in capsys.readouterr().out
+    record = json.loads(capsys.readouterr().out.strip())
+    assert record["message"] == "custom level message"

@@ -1,0 +1,171 @@
+// Single collector config reused unchanged across every environment: local
+// (pushes to the local Prometheus/Loki containers, no auth) and release/prod
+// on the VPS (pushes to Grafana Cloud). Only the environment variables below
+// differ between environments — never this file.
+//
+// ALLOY_METRICS_URL / ALLOY_LOGS_URL     — remote_write / push endpoints
+// ALLOY_METRICS_USERNAME / ALLOY_LOGS_USERNAME — empty locally, numeric ids on Grafana Cloud
+// ALLOY_API_KEY                          — empty locally, a single Grafana Cloud token otherwise
+// DEPLOY_ENVIRONMENT                     — "local" / "release" / "prod", attached as a label
+// COMPOSE_PROJECT_FILTER                 — this Compose project's name, to isolate a shared VPS
+// APP_SERVICES_FILTER                    — this project's own service names (regex)
+
+// 15s, not Alloy's 60s default: rate()/increase() windows need to be at
+// least ~4x the scrape interval to stay smooth, and the infra panels below
+// use 2m windows (60s would only give 2x, under that rule of thumb).
+prometheus.scrape "credit_scoring_api" {
+  targets = [{
+    __address__ = "api:8000",
+    environment = sys.env("DEPLOY_ENVIRONMENT"),
+  }]
+  metrics_path    = "/metrics"
+  scrape_interval = "15s"
+  forward_to      = [prometheus.remote_write.backend.receiver]
+}
+
+// Container CPU/memory/disk/network for this project's own app containers
+// only — not the whole VPS (other apps may share it) and not the
+// observability stack's own containers either. No extra service to deploy:
+// cAdvisor ships as a component embedded in the Alloy binary.
+prometheus.exporter.cadvisor "containers" {
+  docker_host      = "unix:///var/run/docker.sock"
+  docker_only      = true
+  storage_duration = "5m"
+}
+
+prometheus.scrape "containers" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  scrape_interval = "15s"
+  forward_to      = [prometheus.relabel.containers.receiver]
+}
+
+// prometheus.scrape has no post-scrape filtering of its own: metric-level
+// relabeling (as opposed to discovery-target relabeling) is a separate
+// component that sits between the scrape and the remote_write receiver.
+prometheus.relabel "containers" {
+  forward_to = [prometheus.remote_write.backend.receiver]
+
+  rule {
+    source_labels = ["container_label_com_docker_compose_project"]
+    regex         = sys.env("COMPOSE_PROJECT_FILTER")
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["container_label_com_docker_compose_service"]
+    regex         = sys.env("APP_SERVICES_FILTER")
+    action        = "keep"
+  }
+
+  rule {
+    target_label = "environment"
+    replacement  = sys.env("DEPLOY_ENVIRONMENT")
+  }
+}
+
+prometheus.remote_write "backend" {
+  endpoint {
+    url = sys.env("ALLOY_METRICS_URL")
+    basic_auth {
+      username = sys.env("ALLOY_METRICS_USERNAME")
+      password = sys.env("ALLOY_API_KEY")
+    }
+  }
+}
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Keep only this project's own application containers — not "every
+// container of this compose project", which would also include the
+// observability stack's own containers (alloy, grafana, loki, prometheus)
+// and ship their internal noise into the app's log view. Scoped by compose
+// project too, so a shared VPS running other apps never leaks into these logs.
+discovery.relabel "project_logs" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    regex         = sys.env("COMPOSE_PROJECT_FILTER")
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = sys.env("APP_SERVICES_FILTER")
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+
+  rule {
+    target_label = "environment"
+    replacement  = sys.env("DEPLOY_ENVIRONMENT")
+  }
+}
+
+loki.source.docker "project" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.project_logs.output
+  forward_to = [loki.process.app_logs.receiver]
+}
+
+// src/api/infra/logging.py emits one JSON object per record — including
+// uvicorn's own lines, intercepted through the same sink — so every "api"
+// line is valid JSON. Keep that JSON as the line content stored in Loki
+// (don't rewrite/replace it): any bound field (request_id, model_version,
+// error, ...) stays queryable ad hoc via `| json` in Grafana Explore or a
+// Logs panel, including fields no query here anticipated. Rewriting the
+// line to a fixed "LEVEL  message" template would permanently drop every
+// other field, and would silently mangle any line that isn't valid JSON —
+// notably an unhandled traceback printed outside the logging sink, which is
+// exactly the log you don't want to lose.
+//   - stage.json pulls level/timestamp out of the JSON body.
+//   - stage.timestamp makes Loki use the app's own event time instead of the
+//     time Alloy happened to scrape/receive it.
+//   - stage.labels keeps "level" as a cheap, bounded-cardinality stream
+//     label (used for filtering by severity) — the line itself is untouched.
+loki.process "app_logs" {
+  stage.match {
+    selector = "{service=\"api\"}"
+
+    stage.json {
+      expressions = {
+        level     = "",
+        timestamp = "",
+      }
+    }
+
+    stage.timestamp {
+      source = "timestamp"
+      format = "RFC3339"
+    }
+
+    stage.labels {
+      values = {
+        level = "",
+      }
+    }
+  }
+
+  forward_to = [loki.write.backend.receiver]
+}
+
+loki.write "backend" {
+  endpoint {
+    url = sys.env("ALLOY_LOGS_URL")
+    basic_auth {
+      username = sys.env("ALLOY_LOGS_USERNAME")
+      password = sys.env("ALLOY_API_KEY")
+    }
+  }
+}

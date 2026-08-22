@@ -4,6 +4,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Request, Response, status
 from loguru import logger
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from api.modules.health.schemas import HealthResponse, ReadinessChecks, ReadinessResponse
 
@@ -14,6 +15,12 @@ router = APIRouter(tags=["operations"])
 def health() -> HealthResponse:
     """Report process liveness without checking dependencies."""
     return HealthResponse(status="ok")
+
+
+@router.get("/metrics", include_in_schema=False)
+def metrics() -> Response:
+    """Expose Prometheus metrics to the Alloy scraper."""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @router.get("/ready", response_model=ReadinessResponse)

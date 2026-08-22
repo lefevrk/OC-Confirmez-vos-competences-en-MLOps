@@ -7,11 +7,13 @@ from loguru import logger
 
 from api.bootstrap import lifespan
 from api.common.error_handling import BaseModuleErrorHandler
+from api.infra.observability_middleware import ObservabilityMiddleware
 from api.modules.health.router import router as health_router
 from api.modules.scoring.presentation.error_handler import ScoringErrorHandler  # noqa: F401
 from api.modules.scoring.presentation.router import router as scoring_router
 
 app = FastAPI(title="Credit scoring API", lifespan=lifespan)
+app.add_middleware(ObservabilityMiddleware)
 app.include_router(health_router)
 app.include_router(scoring_router)
 
