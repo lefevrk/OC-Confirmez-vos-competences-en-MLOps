@@ -82,6 +82,20 @@ setup-hooks:
 	uv run pre-commit install --hook-type pre-push
 
 #################################################################################
+# DATA DRIFT ANALYSIS                                                          #
+#################################################################################
+
+## Install drift analysis tooling (Evidently, k6 fixtures, notebook)
+.PHONY: drift-requirements
+drift-requirements:
+	uv sync --extra api --group drift
+
+## Export prediction_events to a local Parquet file
+.PHONY: export-drift-tracking
+export-drift-tracking:
+	uv run python scripts/export_tracking_for_drift.py
+
+#################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################
 
