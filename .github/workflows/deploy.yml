@@ -28,11 +28,19 @@ jobs:
           ssh_opts=(-o StrictHostKeyChecking=accept-new -i ~/.ssh/deploy_key)
           vps_target="${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}"
 
-          # deploy/compose.yml is the single source of truth for this
-          # commit's deployment topology — always overwrite the VPS's copy,
-          # never hand-edit it there. Only .env (secrets, IMAGE_TAG,
-          # HOST_PORT) stays VPS-local.
+          # deploy/compose.yml and deploy/alloy/config.alloy are the single
+          # source of truth for this commit's deployment topology — always
+          # overwrite the VPS's copies, never hand-edit them there. Only
+          # .env (secrets, IMAGE_TAG, HOST_PORT) stays VPS-local.
+          # Docker auto-creates a missing bind-mount source as a root-owned
+          # directory, so a stale one from a previous deploy can't be removed
+          # by the deploy user directly — go through a throwaway container
+          # instead, using the docker-group access this workflow already has.
+          ssh "${ssh_opts[@]}" "$vps_target" \
+            "mkdir -p ${{ vars.VPS_PATH }}/alloy && \
+             docker run --rm -v ${{ vars.VPS_PATH }}/alloy:/target alpine rm -rf /target/config.alloy"
           scp "${ssh_opts[@]}" deploy/compose.yml "${vps_target}:${{ vars.VPS_PATH }}/compose.yml"
+          scp "${ssh_opts[@]}" deploy/alloy/config.alloy "${vps_target}:${{ vars.VPS_PATH }}/alloy/config.alloy"
 
           ssh "${ssh_opts[@]}" "$vps_target" \
             "cd ${{ vars.VPS_PATH }} && docker compose pull && \

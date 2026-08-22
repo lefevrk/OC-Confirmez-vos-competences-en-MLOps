@@ -57,7 +57,7 @@ services:
       - loki_data:/loki
 
   alloy:
-    image: grafana/alloy:v1.11.2
+    image: grafana/alloy:v1.18.1
     restart: unless-stopped
     command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
     env_file:
@@ -72,6 +72,11 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
       - /var/lib/docker:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
+      # Docker's containerd-snapshotter storage backend moves layer info out
+      # of /var/lib/docker/image/... into containerd itself — cAdvisor needs
+      # this socket to resolve it, or every container fails with "unable to
+      # create containerd client for overlayfs storage driver".
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
     depends_on:
       - api
       - loki

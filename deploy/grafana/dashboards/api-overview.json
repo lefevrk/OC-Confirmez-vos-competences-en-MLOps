@@ -24,22 +24,7 @@
     }
   ],
   "annotations": {
-    "list": [
-      {
-        "name": "Deployment (API restarted)",
-        "enable": true,
-        "iconColor": "rgba(255, 96, 96, 1)",
-        "type": "prometheus",
-        "datasource": {
-          "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
-        },
-        "expr": "changes(container_start_time_seconds{name=~\".*api.*\", environment=\"$environment\"}[$__interval]) > 0",
-        "titleFormat": "Deployment",
-        "textFormat": "{{name}} restarted",
-        "step": "1m"
-      }
-    ]
+    "list": []
   },
   "editable": true,
   "refresh": "30s",
