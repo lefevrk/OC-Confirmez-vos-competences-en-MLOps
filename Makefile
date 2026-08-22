@@ -95,6 +95,11 @@ drift-requirements:
 export-drift-tracking:
 	uv run python scripts/export_tracking_for_drift.py
 
+## Download the drift reference dataset from the private HF bucket
+.PHONY: download-drift-reference
+download-drift-reference:
+	uv run python scripts/download_drift_reference.py
+
 #################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################

@@ -104,9 +104,10 @@ dev = [
     "pyright>=1.1.409",
     "testcontainers[postgres]",
 ]
-# Data drift analysis tooling (scripts/, notebooks/) — kept out of the default
-# dev sync so routine lint/test/pyright runs don't pay Evidently's heavier
-# install cost. Sync explicitly with `uv sync --extra api --group drift`.
+# Data drift analysis tooling (scripts/, notebooks/) — kept out of the
+# default dev sync so day-to-day API work doesn't pay Evidently's heavier
+# install cost locally. CI syncs it explicitly (--group drift) since
+# scripts/ code is still linted/type-checked/tested like everything else.
 drift = [
     "pyarrow",
     "evidently",
