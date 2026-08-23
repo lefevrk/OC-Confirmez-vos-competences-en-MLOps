@@ -41,6 +41,8 @@ def sample_recent_production(
             ),
             {"sample_size": sample_size},
         ).one()
+    if window_start is None:
+        raise RuntimeError("prediction_events is empty — no production traffic to analyze yet")
     return export_predictions(database_url, start=window_start)
 
 
