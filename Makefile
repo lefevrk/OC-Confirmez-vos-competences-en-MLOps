@@ -100,6 +100,11 @@ export-drift-tracking:
 download-drift-reference:
 	uv run python scripts/download_drift_reference.py
 
+## Generate the k6 ramped drift fixture from the downloaded reference
+.PHONY: generate-drift-fixtures
+generate-drift-fixtures:
+	uv run python scripts/generate_drift_fixtures.py
+
 #################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################
