@@ -94,7 +94,6 @@ def test_schema_matches_the_frozen_field_and_alias_contract() -> None:
 def test_schema_accepts_aliases_and_preserves_model_column_names() -> None:
     """Client aliases are accepted and passed to the model without renaming."""
     payload = valid_payload()
-    payload.pop("ext_source_2")
     payload["EXT_SOURCE_2"] = 0.42
 
     request = PredictionRequest.model_validate(payload)
@@ -112,7 +111,7 @@ def test_schema_allows_omitting_an_optional_feature() -> None:
 
 @pytest.mark.parametrize(
     "field_name",
-    ["payment_credit_ratio", "days_birth", "organization_type"],
+    ["amt_credit", "days_birth", "organization_type"],
 )
 def test_schema_rejects_missing_required_feature(field_name: str) -> None:
     """A missing required model input is an invalid API request."""
@@ -163,3 +162,36 @@ def test_schema_rejects_a_non_positive_monetary_amount() -> None:
     """Credit, annuity and goods price amounts cannot be zero or negative."""
     with pytest.raises(ValidationError):
         PredictionRequest.model_validate({**valid_payload(), "amt_credit": 0})
+
+
+@pytest.mark.parametrize(
+    ("field_name", "out_of_sign_value"),
+    [
+        # "days"-style fields count backward from the application date and
+        # are never positive in the training data.
+        ("days_birth", 100),
+        ("days_id_publish", 1),
+        ("DAYS_EMPLOYED", 1),
+        # ratios, amounts and counts are never negative in the training data.
+        ("income_credit_ratio", -1),
+        ("payment_credit_ratio", -0.1),
+        ("installment_amt_payment_sum", -1),
+    ],
+)
+def test_schema_rejects_a_value_outside_its_observed_sign(
+    field_name: str, out_of_sign_value: float
+) -> None:
+    """Bounds derived from the training data reject values of the wrong sign."""
+    with pytest.raises(ValidationError):
+        PredictionRequest.model_validate({**valid_payload(), field_name: out_of_sign_value})
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["payment_credit_ratio", "EXT_SOURCE_2", "AMT_ANNUITY", "installment_amt_payment_sum"],
+)
+def test_schema_accepts_null_on_a_field_nullable_in_the_training_data(field_name: str) -> None:
+    """Fields with real missing values in the training data accept null, not just omission."""
+    request = PredictionRequest.model_validate({**valid_payload(), field_name: None})
+
+    assert request.model_features()[field_name] is None
