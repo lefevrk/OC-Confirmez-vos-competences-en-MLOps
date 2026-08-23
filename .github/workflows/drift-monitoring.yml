@@ -1,0 +1,20 @@
+name: Drift monitoring
+
+on:
+  schedule:
+    - cron: "0 3 * * 4" # Thursday 03:00 UTC — always production
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to analyze"
+        required: true
+        type: choice
+        options: [release, production]
+        default: release
+
+jobs:
+  drift-report:
+    uses: ./.github/workflows/drift-report.yml
+    with:
+      environment: ${{ github.event_name == 'schedule' && 'production' || inputs.environment }}
+    secrets: inherit

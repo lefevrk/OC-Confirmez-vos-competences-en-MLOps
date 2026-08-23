@@ -105,10 +105,20 @@ download-drift-reference:
 generate-drift-fixtures:
 	uv run python scripts/generate_drift_fixtures.py
 
-## Replay the ramped drift fixture against the local API (~15min; SLEEP_SECONDS=0 for full speed)
+## Analyze the most recent production predictions for drift (writes reports/drift_report.html + drift_summary.md)
+.PHONY: generate-drift-report
+generate-drift-report:
+	uv run python -m scripts.generate_drift_report
+
+# Overridable on the command line, e.g. `make load-test-drift BASE_URL=https://vps... API_TOKEN=...`
+BASE_URL ?= http://localhost:8000
+API_TOKEN ?=
+SLEEP_SECONDS ?=
+
+## Replay the ramped drift fixture against BASE_URL (~15min; SLEEP_SECONDS=0 for full speed)
 .PHONY: load-test-drift
 load-test-drift:
-	k6 run scripts/k6/predict_load.js
+	k6 run -e BASE_URL=$(BASE_URL) -e API_TOKEN=$(API_TOKEN) $(if $(SLEEP_SECONDS),-e SLEEP_SECONDS=$(SLEEP_SECONDS)) scripts/k6/predict_load.js
 
 #################################################################################
 # Self Documenting Commands                                                     #
