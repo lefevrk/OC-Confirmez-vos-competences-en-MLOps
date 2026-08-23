@@ -105,6 +105,11 @@ download-drift-reference:
 generate-drift-fixtures:
 	uv run python scripts/generate_drift_fixtures.py
 
+## Replay the ramped drift fixture against the local API (~15min; SLEEP_SECONDS=0 for full speed)
+.PHONY: load-test-drift
+load-test-drift:
+	k6 run scripts/k6/predict_load.js
+
 #################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################
