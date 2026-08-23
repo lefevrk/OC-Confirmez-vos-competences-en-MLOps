@@ -51,6 +51,14 @@ jobs:
           ssh_opts=(-o StrictHostKeyChecking=accept-new -i ~/.ssh/deploy_key)
           vps_target="${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}"
 
-          ssh "${ssh_opts[@]}" "$vps_target" "mkdir -p ${{ vars.VPS_PATH }}/reports"
+          # If the api service's compose.yml bind mount reaches this path
+          # before this workflow ever does (any normal deploy will), Docker
+          # auto-creates it as a root-owned directory (same issue deploy.yml
+          # already works around for alloy/) — the deploy user's plain scp
+          # would then fail with permission denied. Force it writable through
+          # a throwaway container instead of assuming ownership.
+          ssh "${ssh_opts[@]}" "$vps_target" \
+            "mkdir -p ${{ vars.VPS_PATH }}/reports && \
+             docker run --rm -v ${{ vars.VPS_PATH }}/reports:/target alpine chmod 777 /target"
           scp "${ssh_opts[@]}" reports/drift_report.html \
             "${vps_target}:${{ vars.VPS_PATH }}/reports/drift_report.html"
