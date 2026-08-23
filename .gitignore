@@ -36,6 +36,17 @@ logs/
 # MLflow (local runs, if used ad hoc)
 mlruns/
 
+# Drift analysis working data (downloaded reference, Postgres exports) —
+# derived/reproducible, not committed. Fixtures under scripts/k6/fixtures/
+# are intentionally excluded from this rule (committed).
+data/
+
+# Root-level drift report output (scripts/generate_drift_report.py) — CI
+# generates this fresh each run and ships it to the VPS; only the notebook's
+# own committed snapshot under notebooks/reports/ is tracked. Anchored to the
+# repo root so it doesn't also match notebooks/reports/.
+/reports/
+
 # Docs build
 site/
 

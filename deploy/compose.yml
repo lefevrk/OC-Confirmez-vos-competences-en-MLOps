@@ -6,6 +6,10 @@ services:
       - "${HOST_PORT}:8000"
     env_file:
       - .env
+    volumes:
+      # Populated by .github/workflows/drift-report.yml (scp'd, not part of
+      # the image) — read live by GET /evidently, no redeploy needed.
+      - ./reports:/app/reports
 
   # Same config.alloy as the local stack (deploy/alloy/config.alloy) — only
   # the .env values differ, pointing this collector at Grafana Cloud instead

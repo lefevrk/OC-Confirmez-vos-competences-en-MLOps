@@ -82,6 +82,45 @@ setup-hooks:
 	uv run pre-commit install --hook-type pre-push
 
 #################################################################################
+# DATA DRIFT ANALYSIS                                                          #
+#################################################################################
+
+## Install drift analysis tooling (Evidently, k6 fixtures, notebook)
+.PHONY: drift-requirements
+drift-requirements:
+	uv sync --extra api --group drift
+
+## Export prediction_events to a local Parquet file
+.PHONY: export-drift-tracking
+export-drift-tracking:
+	uv run python scripts/export_tracking_for_drift.py
+
+## Download the drift reference dataset from the private HF bucket
+.PHONY: download-drift-reference
+download-drift-reference:
+	uv run python scripts/download_drift_reference.py
+
+## Generate the k6 ramped drift fixture from the downloaded reference
+.PHONY: generate-drift-fixtures
+generate-drift-fixtures:
+	uv run python scripts/generate_drift_fixtures.py
+
+## Analyze the most recent production predictions for drift (writes reports/drift_report.html + drift_summary.md)
+.PHONY: generate-drift-report
+generate-drift-report:
+	uv run python -m scripts.generate_drift_report
+
+# Overridable on the command line, e.g. `make load-test-drift BASE_URL=https://vps... API_TOKEN=...`
+BASE_URL ?= http://localhost:8000
+API_TOKEN ?=
+SLEEP_SECONDS ?=
+
+## Replay the ramped drift fixture against BASE_URL (~15min; SLEEP_SECONDS=0 for full speed)
+.PHONY: load-test-drift
+load-test-drift:
+	k6 run -e BASE_URL=$(BASE_URL) -e API_TOKEN=$(API_TOKEN) $(if $(SLEEP_SECONDS),-e SLEEP_SECONDS=$(SLEEP_SECONDS)) scripts/k6/predict_load.js
+
+#################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################
 

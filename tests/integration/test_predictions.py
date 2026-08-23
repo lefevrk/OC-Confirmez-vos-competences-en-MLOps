@@ -213,7 +213,7 @@ def test_prediction_rejects_a_malformed_payload(monkeypatch) -> None:
     monkeypatch.setattr("api.bootstrap.connect_prediction_recorder", lambda _settings: recorder)
 
     payload = valid_payload()
-    del payload["payment_credit_ratio"]
+    del payload["amt_credit"]
     with TestClient(app) as client:
         response = client.post("/predictions", json=payload)
 
