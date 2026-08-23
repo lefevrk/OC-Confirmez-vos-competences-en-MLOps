@@ -41,11 +41,11 @@ mlruns/
 # are intentionally excluded from this rule (committed).
 data/
 
-# Root-level drift report output (scripts/generate_drift_report.py) — CI
-# generates this fresh each run and ships it to the VPS; only the notebook's
-# own committed snapshot under notebooks/reports/ is tracked. Anchored to the
-# repo root so it doesn't also match notebooks/reports/.
+# Drift report output — regenerated on demand (CI's scripts/generate_drift_report.py
+# for /reports/, `make generate-drift-report` or re-running the notebook for
+# notebooks/reports/), not committed.
 /reports/
+notebooks/reports/
 
 # Docs build
 site/
