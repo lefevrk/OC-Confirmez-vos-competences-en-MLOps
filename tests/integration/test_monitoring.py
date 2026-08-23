@@ -61,8 +61,10 @@ def test_drift_report_is_served_once_generated(monkeypatch, tmp_path: Path) -> N
     monkeypatch.setattr(config_module, "_settings", None)
 
 
-def test_drift_report_requires_a_token_once_one_is_configured(monkeypatch, tmp_path: Path) -> None:
-    """The route is gated behind the same bearer-token auth as /predictions."""
+def test_drift_report_requires_credentials_once_a_token_is_configured(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Gated behind HTTP Basic Auth — browser-friendly, unlike the Bearer scheme on /predictions."""
     _bootstrap_ok(monkeypatch)
     (tmp_path / "drift_report.html").write_text("<html>drift report</html>")
     _use_reports_dir(monkeypatch, tmp_path)
@@ -72,18 +74,33 @@ def test_drift_report_requires_a_token_once_one_is_configured(monkeypatch, tmp_p
         response = client.get("/evidently")
 
     assert response.status_code == 401
+    assert response.headers["www-authenticate"] == "Basic"
     monkeypatch.setattr(config_module, "_settings", None)
 
 
-def test_drift_report_succeeds_with_the_correct_token(monkeypatch, tmp_path: Path) -> None:
-    """The right Bearer token grants access to the drift report."""
+def test_drift_report_rejects_the_wrong_password(monkeypatch, tmp_path: Path) -> None:
+    """A wrong password is rejected the same as no credentials at all."""
     _bootstrap_ok(monkeypatch)
     (tmp_path / "drift_report.html").write_text("<html>drift report</html>")
     _use_reports_dir(monkeypatch, tmp_path)
     monkeypatch.setenv("API_TOKEN", "s3cret")
 
     with TestClient(app) as client:
-        response = client.get("/evidently", headers={"Authorization": "Bearer s3cret"})
+        response = client.get("/evidently", auth=("anything", "wrong"))
+
+    assert response.status_code == 401
+    monkeypatch.setattr(config_module, "_settings", None)
+
+
+def test_drift_report_succeeds_with_the_correct_password(monkeypatch, tmp_path: Path) -> None:
+    """The username is unchecked — only the password (API_TOKEN) matters."""
+    _bootstrap_ok(monkeypatch)
+    (tmp_path / "drift_report.html").write_text("<html>drift report</html>")
+    _use_reports_dir(monkeypatch, tmp_path)
+    monkeypatch.setenv("API_TOKEN", "s3cret")
+
+    with TestClient(app) as client:
+        response = client.get("/evidently", auth=("anything", "s3cret"))
 
     assert response.status_code == 200
     monkeypatch.setattr(config_module, "_settings", None)

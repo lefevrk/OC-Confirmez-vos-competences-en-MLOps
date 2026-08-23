@@ -5,14 +5,14 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
-from api.infra.auth import verify_token
+from api.infra.auth import verify_basic_auth
 from api.infra.config import get_settings
 
 router = APIRouter(prefix="/evidently", tags=["operations"])
 
 
 @router.get("", include_in_schema=False)
-def drift_report(_token: str = Depends(verify_token)) -> FileResponse:
+def drift_report(_token: str = Depends(verify_basic_auth)) -> FileResponse:
     """Return the most recently generated Evidently drift report.
 
     404 until the first CI run (see .github/workflows/drift-report.yml) has
