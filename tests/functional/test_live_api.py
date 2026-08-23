@@ -54,7 +54,7 @@ def test_prediction_succeeds_with_a_valid_payload_and_token(
 def test_prediction_rejects_a_malformed_payload(client: httpx.Client, api_token: str) -> None:
     """A payload missing a required field is rejected before scoring runs."""
     payload = valid_payload()
-    del payload["payment_credit_ratio"]
+    del payload["amt_credit"]
     response = client.post(
         "/predictions",
         json=payload,

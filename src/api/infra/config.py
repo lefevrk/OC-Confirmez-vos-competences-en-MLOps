@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # API authentication — empty disables it, useful for local development
     api_token: str = ""
 
+    # Directory the drift report is read from (see scripts/generate_drift_report.py)
+    reports_dir: str = "reports"
+
 
 _settings: Settings | None = None
 

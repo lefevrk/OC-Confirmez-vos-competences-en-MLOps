@@ -1,0 +1,64 @@
+name: Drift report
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+jobs:
+  drift-report:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: drift-report-${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --extra api --group drift
+
+      - name: Download the drift reference dataset
+        env:
+          HF_BUCKET_ID: ${{ secrets.HF_BUCKET_ID }}
+          HF_BUCKET_READ_TOKEN: ${{ secrets.HF_BUCKET_READ_TOKEN }}
+        run: uv run python scripts/download_drift_reference.py
+
+      - name: Generate the drift report
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: uv run python -m scripts.generate_drift_report --environment "${{ inputs.environment }}"
+
+      - name: Publish the summary
+        run: cat reports/drift_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-summary-${{ inputs.environment }}
+          path: reports/drift_summary.md
+
+      - name: Deploy the report to the VPS
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh_opts=(-o StrictHostKeyChecking=accept-new -i ~/.ssh/deploy_key)
+          vps_target="${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}"
+
+          # If the api service's compose.yml bind mount reaches this path
+          # before this workflow ever does (any normal deploy will), Docker
+          # auto-creates it as a root-owned directory (same issue deploy.yml
+          # already works around for alloy/) — the deploy user's plain scp
+          # would then fail with permission denied. Force it writable through
+          # a throwaway container instead of assuming ownership.
+          ssh "${ssh_opts[@]}" "$vps_target" \
+            "mkdir -p ${{ vars.VPS_PATH }}/reports && \
+             docker run --rm -v ${{ vars.VPS_PATH }}/reports:/target alpine chmod 777 /target"
+          scp "${ssh_opts[@]}" reports/drift_report.html \
+            "${vps_target}:${{ vars.VPS_PATH }}/reports/drift_report.html"

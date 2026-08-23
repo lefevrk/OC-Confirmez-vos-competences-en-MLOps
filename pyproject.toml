@@ -7,7 +7,7 @@ packages = ["src/api"]
 
 [project]
 name = "credit-scoring-api"
-version = "0.3.0"
+version = "0.4.0"
 description = "Credit scoring API — inference service (MLOps deployment repo)"
 authors = [
   { name = "Kilian LEFEVRE" },
@@ -77,7 +77,7 @@ convention = "google"
 quote-style = "double"
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src", "tests", "scripts"]
 typeCheckingMode = "basic"
 useLibraryCodeForTypes = true
 
@@ -103,4 +103,16 @@ dev = [
     "pre-commit>=4.6.0",
     "pyright>=1.1.409",
     "testcontainers[postgres]",
+]
+# Data drift analysis tooling (scripts/, notebooks/) — kept out of the
+# default dev sync so day-to-day API work doesn't pay Evidently's heavier
+# install cost locally. CI syncs it explicitly (--group drift) since
+# scripts/ code is still linted/type-checked/tested like everything else.
+drift = [
+    "pyarrow",
+    "evidently",
+    "huggingface_hub",
+    "typer",
+    "jupyter",
+    "ipykernel",
 ]

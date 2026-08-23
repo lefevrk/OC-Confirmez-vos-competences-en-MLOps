@@ -13,6 +13,10 @@ services:
       # over the compose network; `make db-migrate` (run on the host) keeps
       # using the .env value instead, which points at the published port.
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/credit_scoring
+    volumes:
+      # Same mount as deploy/compose.yml — drop a report here
+      # (make generate-drift-report) and GET /evidently serves it live.
+      - ./reports:/app/reports
     depends_on:
       postgres:
         condition: service_healthy
