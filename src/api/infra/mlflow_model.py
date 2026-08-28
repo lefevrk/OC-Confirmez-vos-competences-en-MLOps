@@ -9,25 +9,44 @@ from typing import Any
 from loguru import logger
 import mlflow
 from mlflow.artifacts import download_artifacts
-import mlflow.sklearn as mlflow_sklearn
 from mlflow.tracking import MlflowClient
-import pandas as pd
+import numpy as np
+import onnxruntime as ort
 
 from api.infra.config import Settings
 
 
+def _feature_tensor(value: Any, onnx_type: str) -> np.ndarray:
+    """Cast one feature value to the shape/dtype its ONNX input tensor declares."""
+    if onnx_type == "tensor(string)":
+        return np.array([[str(value)]], dtype=object)
+    return np.array([[value]], dtype=np.float32)
+
+
 @dataclass(frozen=True)
 class MlflowScoringModel:
-    """MLflow sklearn model and the threshold logged by its source run."""
+    """ONNX Runtime session for the champion, and the threshold logged by its source run.
 
-    model: Any
+    Loaded directly via `onnxruntime` rather than `mlflow.pyfunc`: the
+    champion's ONNX graph declares one named input tensor per feature (mixed
+    float/string types), a shape MLflow's built-in ONNX pyfunc wrapper does
+    not marshal correctly from a DataFrame or dict — reproduced against the
+    real model as `INVALID_ARGUMENT: Unexpected input data type`. See
+    references/OPTIMISATION_ONNX.md for the full trade-off.
+    """
+
+    session: ort.InferenceSession
     version: str
     threshold: float
 
     def probability(self, features: dict[str, Any]) -> float:
         """Score in memory; this method intentionally makes no MLflow call."""
-        probabilities = self.model.predict_proba(pd.DataFrame([features]))
-        return float(probabilities[0][1])
+        feed = {
+            input_meta.name: _feature_tensor(features[input_meta.name], input_meta.type)
+            for input_meta in self.session.get_inputs()
+        }
+        (probabilities,) = self.session.run(None, feed)
+        return float(np.asarray(probabilities)[0][1])
 
 
 def load_champion(settings: Settings) -> MlflowScoringModel:
@@ -58,16 +77,18 @@ def load_champion(settings: Settings) -> MlflowScoringModel:
     if not 0 <= threshold <= 1:
         raise RuntimeError(f"Champion threshold {threshold} is outside the [0, 1] range")
 
-    logger.bind(run_id=source_run_id).debug("mlflow_sklearn_model_load_started")
-    sklearn_model = mlflow_sklearn.load_model(
-        f"models:/{settings.model_name}@{settings.model_alias}"
+    logger.bind(run_id=source_run_id).debug("mlflow_onnx_model_load_started")
+    model_dir = Path(
+        download_artifacts(artifact_uri=f"models:/{settings.model_name}@{settings.model_alias}")
     )
+    onnx_path = next(model_dir.glob("*.onnx"))
+    session = ort.InferenceSession(str(onnx_path))
 
     model_version = str(registered_model_version.version)
     logger.bind(model_version=model_version, threshold=threshold).info("mlflow_champion_loaded")
 
     return MlflowScoringModel(
-        model=sklearn_model,
+        session=session,
         version=model_version,
         threshold=threshold,
     )

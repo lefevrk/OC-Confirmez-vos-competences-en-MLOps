@@ -1,0 +1,93 @@
+# Optimisation d'inférence (ONNX)
+
+Étape 4 du cahier des charges : partir des données de monitoring réelles pour identifier un goulot d'étranglement, tester une stratégie d'optimisation, et prouver le gain sans régression. Contrainte du projet : la mécanique MLflow reste la source de vérité du modèle servi — pas de fichier modèle posé sur disque en dehors du registre, contrairement à une conversion ONNX qui bypasserait MLflow au moment du serving.
+
+Ce dépôt ne fait pas l'entraînement ni la conversion (voir [Modèle de scoring](../design/model.md)) — la conversion ONNX et sa validation de non-régression ont été faites dans le dépôt d'entraînement, d'abord enregistrées sous l'alias `challenger` (registre `credit_scoring`) pour comparaison, comme décrit ci-dessous. **Après validation, ce modèle ONNX a été promu sur l'alias `champion`** ; l'ancien champion sklearn reste accessible sous l'alias `sklearn-champion` (rollback possible en un `MODEL_ALIAS=sklearn-champion` + redéploiement, sans changement de code — voir [Modèle de scoring](../design/model.md)).
+
+## Goulot identifié
+
+Mesuré en local avec `scripts/profiling/profile_predict.py` (voir [Tests & qualité](testing.md) pour le lancer), 200 appels contre le modèle alors champion — sklearn v4, aujourd'hui accessible sous l'alias `sklearn-champion` :
+
+| Étage | Moyenne | Part du temps atomique |
+|---|---|---|
+| `validation` (Pydantic) | 0.009 ms | négligeable |
+| `inference` (`model.probability`) | 2.251 ms | 53 % |
+| `persistence` (écriture Postgres) | 1.999 ms | 47 % |
+
+Le détail fonction par fonction (`cProfile`, voir le `.prof` du même run) montre que `inference` n'est pas dominé par le calcul LightGBM lui-même, mais par le **preprocessing scikit-learn** (`ColumnTransformer.transform`) et un **overhead `joblib.parallel`** — la pipeline sklearn dispatche son travail en parallèle même pour une seule ligne à la fois, ce qui est du pur overhead dans ce contexte de scoring unitaire.
+
+![Visualisation snakeviz du profil sklearn — predict() se scinde en probability (1.24s) et record (0.683s)](../assets/model/snakeviz_baseline_sklearn.png)
+
+*`uv run snakeviz reports/profiling/baseline-sklearn_predict.prof`, vue icicle limitée à 3 niveaux. `predict()` (1.96 s cumulées sur 200 appels) se scinde presque à parts égales entre `mlflow_model.py:27(probability)` (1.24 s) et `tracking.py:46(record)` (0.683 s) — visuellement, la moitié gauche confirme le tableau ci-dessus. Un niveau plus bas, `probability` passe déjà par `pipeline.py:882(predict_proba)` (1.03 s) : la quasi-totalité du temps d'inférence est déjà dans la pipeline sklearn avant même d'atteindre le modèle LightGBM lui-même.*
+
+## Stratégie retenue
+
+Conversion du pipeline (preprocessing + LightGBM) en un graphe ONNX unique dans le dépôt d'entraînement, ce qui élimine précisément ce dispatch Python/joblib par appel. Côté serving, `src/api/infra/mlflow_model.py` charge ce graphe **directement via `onnxruntime`** plutôt que par `mlflow.pyfunc.load_model` générique — le wrapper `pyfunc` intégré de `mlflow.onnx` ne marshalle pas correctement un graphe à 50 entrées nommées séparément et de types mixtes (float/string), reproduit et documenté lors de l'implémentation.
+
+Compromis assumé : `mlflow_model.py` n'est plus totalement agnostique du format de modèle (il sait qu'il charge un graphe ONNX). La résolution par alias MLflow, le téléchargement et la validation du `threshold.json` restent inchangés — seul le format du fichier modèle chargé a changé. C'est justement ce qui rend la promotion (`challenger` → `champion`) transparente pour ce dépôt : aucun changement de code n'a été nécessaire, seul l'alias MLflow a été redirigé côté dépôt d'entraînement.
+
+## Validation de non-régression
+
+Comparaison entre l'ancien champion (v4, sklearn — alias `sklearn-champion` depuis la promotion) et le candidat ONNX (v5, alias `champion` depuis la promotion) sur le même jeu de test, au même seuil de décision (0.53), faite dans le dépôt d'entraînement :
+
+| Métrique | `sklearn-champion` (v4) | `champion` (v5, ONNX) | Écart |
+|---|:---:|:---:|:---:|
+| ROC-AUC | 0.7804 | 0.7804 | -7.8e-07 |
+| Log loss | 0.5256 | 0.5256 | +1.3e-06 |
+| Precision | 0.1977 | 0.1977 | +0 |
+| Recall | 0.6528 | 0.6528 | +0 |
+| F1 | 0.3035 | 0.3035 | +0 |
+| Coût métier | 0.4942 | 0.4942 | +0 |
+
+Écart de probabilité prédite entre les deux modèles, ligne par ligne sur le jeu de test : écart moyen `7.2e-07`, écart maximal `0.0172` (arrondi de précision flottante lié à la conversion, sans effet sur la décision au seuil 0.53).
+
+## Résultat mesuré
+
+Même protocole de profiling, 200 appels, rejoué contre le modèle ONNX (alors `challenger`, aujourd'hui `champion`) :
+
+![Latence par étage avant/après optimisation ONNX](../assets/model/onnx_inference_latency_comparison.png)
+
+*Généré par `make plot-profile-comparison` à partir de deux runs `scripts/profiling/profile_predict.py` (`reports/profiling/baseline-sklearn_stats.json` et `challenger-onnx_stats.json`, non commités).*
+
+| Étage | `sklearn-champion` (v4) | `champion` (v5, ONNX) | Gain |
+|---|:---:|:---:|:---:|
+| `inference` | 2.251 ms | 0.107–0.266 ms selon le run | **~8 à 20×** plus rapide |
+| `persistence` | 1.999 ms | 1.810–3.291 ms | inchangé (bruit Postgres normal, indépendant du modèle) |
+| **Goulot dominant** | `inference` (53 %) | `persistence` (92–94 %) | le modèle n'est plus le facteur limitant |
+
+L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant. C'est un **second goulot, indépendant du modèle**, hors scope de cette optimisation (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé).
+
+### Piste identifiée pour `persistence`, non implémentée
+
+Le coût dominant (`session.commit()`, ~400 appels `psycopg2.cursor.execute` pour 200 prédictions dans le profil) est un aller-retour réseau + commit synchrone **par ligne**, payé en plein par le client puisque `create_prediction` (`router.py`) attend `recorder.record()` avant de répondre.
+
+Le levier le plus direct serait de sortir cet appel du chemin critique avec `fastapi.BackgroundTasks` : la tâche s'exécute après l'envoi de la réponse, donc le client ne paie plus ce coût dans sa latence perçue — sans changer le débit ni la charge réelle sur Postgres.
+
+**Non retenu pour l'instant** : ça affaiblit la garantie associée à une réponse `200` — elle ne signifierait plus « la prédiction est déjà persistée », seulement « le modèle a scoré ». En cas de crash du process entre l'envoi de la réponse et l'exécution de la tâche en arrière-plan, l'événement serait silencieusement perdu, ce qui va à l'encontre du point de vigilance de l'Étape 4 (« assurez-vous que les optimisations n'introduisent pas de régressions ») — ici, une régression de durabilité plutôt que de précision du modèle, mais une régression tout de même. À reconsidérer seulement si une garantie de rattrapage est ajoutée en parallèle (ex. file d'attente durable, retry avec dead-letter) — hors scope de ce travail d'optimisation modèle.
+
+![Visualisation snakeviz du profil ONNX — persistence (Postgres) occupe tout le graphe, l'inférence a disparu](../assets/model/snakeviz_challenger_onnx.png)
+
+*`uv run snakeviz reports/profiling/challenger-onnx_predict.prof`, même vue, 3 niveaux. Contraste direct avec la capture précédente : `tracking.py:46(record)` (0.406 s) occupe maintenant la totalité du graphe visible — `mlflow_model.py:27(probability)` n'apparaît même plus dans les trois premiers niveaux, sa part étant devenue trop petite pour être visuellement distincte de `record()`. La table de stats en bas de page snakeviz confirme le chiffre : `onnxruntime_inference_collection.py:308(run)` ne cumule que 0.030 s sur les 200 appels, contre 0.379 s pour le seul `session.py:1999(commit)` Postgres.*
+
+!!! note "Capture Grafana à ajouter après déploiement en production"
+    Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profiling/`), pas encore de trafic de production réel. L'alias MLflow `champion` pointe déjà vers le modèle ONNX, mais ce dépôt (le code qui sait le charger via `onnxruntime`) n'est pas encore déployé en release/production. Une fois ce code mergé et déployé (voir [CI/CD & déploiement](deployment.md)), ajouter ici une capture du dashboard Grafana (`api-overview`, section latence — voir [Monitoring & métriques](monitoring.md)) montrant la bascule visible de `credit_scoring_inference_duration_seconds` avant/après le déploiement, comme preuve en conditions réelles.
+
+    <!--
+    ![Latence d'inférence en production avant/après la bascule ONNX](../assets/screenshots/grafana-onnx-latency-comparison.png)
+    -->
+
+## Reproduire
+
+```bash
+docker compose up -d postgres
+make db-migrate
+
+# Ancien champion (sklearn, alias `sklearn-champion` depuis la promotion) :
+MODEL_ALIAS=sklearn-champion SAMPLES=200 LABEL=baseline-sklearn make profile-predict
+# Modèle optimisé (ONNX, alias `champion` depuis la promotion — celui de .env par défaut) :
+SAMPLES=200 LABEL=challenger-onnx make profile-predict
+
+make plot-profile-comparison
+```
+
+Détail fonction par fonction d'un run : `uv run snakeviz reports/profiling/<label>_predict.prof`.

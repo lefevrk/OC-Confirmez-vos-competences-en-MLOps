@@ -6,7 +6,7 @@ report formatting can be unit-tested without a running stack — the same
 split `scripts/drift_analysis.py` uses for the drift tooling.
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -73,6 +73,24 @@ def identify_bottleneck(stages: dict[str, StageStats]) -> str:
     total = sum(stage.mean_ms for stage in stages.values())
     share = leader.mean_ms / total if total else 0.0
     return f"{leader_name} ({leader.mean_ms:.3f} ms/appel en moyenne, {share:.0%} du temps mesuré)"
+
+
+def stats_to_json(
+    *,
+    label: str,
+    generated_at: str,
+    model_version: str,
+    sample_size: int,
+    stages: dict[str, StageStats],
+) -> dict[str, Any]:
+    """Serialize a run's stage stats for later reuse (e.g. a before/after comparison chart)."""
+    return {
+        "label": label,
+        "generated_at": generated_at,
+        "model_version": model_version,
+        "sample_size": sample_size,
+        "stages": {name: asdict(stats) for name, stats in stages.items()},
+    }
 
 
 def render_markdown_report(

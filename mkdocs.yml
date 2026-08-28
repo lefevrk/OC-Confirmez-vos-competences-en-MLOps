@@ -24,6 +24,10 @@ theme:
     - content.code.annotate
     - search.suggest
 
+plugins:
+  - search
+  - glightbox
+
 nav:
   - Accueil: index.md
   - Démarrage:
@@ -46,6 +50,7 @@ nav:
       - Monitoring & métriques: operations/monitoring.md
       - Génération du trafic de drift: operations/drift-generation.md
       - Analyse du drift: operations/drift-analysis.md
+      - Optimisation d'inférence (ONNX): operations/optimisation-inference.md
       - CI/CD & déploiement: operations/deployment.md
       - Tests & qualité: operations/testing.md
 

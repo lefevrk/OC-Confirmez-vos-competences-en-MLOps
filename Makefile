@@ -134,6 +134,21 @@ LABEL ?= run
 profile-predict:
 	uv run python -m scripts.profiling.profile_predict --samples $(SAMPLES) --warmup $(WARMUP) --label $(LABEL)
 
+# Overridable on the command line, e.g. `make plot-profile-comparison BASELINE=baseline-sklearn CHALLENGER=challenger-onnx`
+BASELINE ?= baseline-sklearn
+CHALLENGER ?= challenger-onnx
+BASELINE_NAME ?= Champion (sklearn)
+CHALLENGER_NAME ?= Challenger (ONNX)
+COMPARISON_OUTPUT ?= docs/assets/model/onnx_inference_latency_comparison.png
+
+## Plot a before/after latency chart from two profile-predict runs
+.PHONY: plot-profile-comparison
+plot-profile-comparison:
+	uv run python -m scripts.profiling.plot_comparison \
+		--baseline $(BASELINE) --baseline-name "$(BASELINE_NAME)" \
+		--challenger $(CHALLENGER) --challenger-name "$(CHALLENGER_NAME)" \
+		--output $(COMPARISON_OUTPUT)
+
 #################################################################################
 # DOCUMENTATION                                                                #
 #################################################################################

@@ -95,6 +95,12 @@ class MlflowClient:
             base_url=base_url.rstrip("/"), auth=(username, password), timeout=30
         )
 
+    def get_run(self, run_id: str) -> dict:
+        """Fetch a single run by id."""
+        response = self._client.get("/api/2.0/mlflow/runs/get", params={"run_id": run_id})
+        response.raise_for_status()
+        return response.json()["run"]
+
     def resolve_champion_run(self) -> dict:
         """Return the run dict for the registered model's current champion alias."""
         response = self._client.get(
@@ -103,11 +109,7 @@ class MlflowClient:
         )
         response.raise_for_status()
         version = response.json()["model_version"]
-        run_response = self._client.get(
-            "/api/2.0/mlflow/runs/get", params={"run_id": version["run_id"]}
-        )
-        run_response.raise_for_status()
-        return {**run_response.json()["run"], "version": version["version"]}
+        return {**self.get_run(version["run_id"]), "version": version["version"]}
 
     def download_artifact(self, run_id: str, artifact_path: str, output_path: Path) -> None:
         """Save one run artifact (a plot PNG) to output_path."""
@@ -267,9 +269,32 @@ def main() -> None:
         print(f"Could not reach MLflow ({exc}) — leaving model.md as-is.")
         return
 
+    # A champion run that only converts an existing model (e.g. to ONNX for
+    # inference latency) doesn't retrain, so it has no reason to re-log the
+    # training hyperparameters/threshold — it points back to the run it
+    # converted instead (`source_champion_run_id`). Fall back to that run's
+    # params for anything the champion run itself doesn't have, so the page
+    # still shows real numbers instead of "?".
+    current_params = _params_by_key(run)
+    source_run_id = current_params.get("source_champion_run_id")
+    if "scale_pos_weight" not in current_params and source_run_id:
+        source_params = _params_by_key(client.get_run(source_run_id))
+        run["data"]["params"] = [
+            {"key": key, "value": value}
+            for key, value in {**source_params, **current_params}.items()
+        ]
+
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
     for filename in PLOT_ARTIFACTS:
-        client.download_artifact(run["info"]["run_id"], f"plots/{filename}", ASSETS_DIR / filename)
+        try:
+            client.download_artifact(
+                run["info"]["run_id"], f"plots/{filename}", ASSETS_DIR / filename
+            )
+        except httpx.HTTPStatusError as exc:
+            # Not every champion run re-logs the diagnostic plots (e.g. an ONNX
+            # conversion run promoted for its inference latency, not retrained) —
+            # keep whatever plot is already committed rather than fail the build.
+            print(f"Could not download plots/{filename} ({exc}) — keeping the existing file.")
 
     captured_at = datetime.now(UTC).strftime("%Y-%m-%d")
     DOCS_PAGE.write_text(_render_page(run, run["info"]["run_name"], captured_at))
