@@ -11,12 +11,23 @@ from api.infra.config import get_settings
 router = APIRouter(prefix="/evidently", tags=["operations"])
 
 
-@router.get("", include_in_schema=False)
+@router.get(
+    "",
+    summary="Dernier rapport de drift",
+    response_description="Rapport Evidently au format HTML",
+    responses={
+        200: {"content": {"text/html": {}}, "description": "Rapport Evidently au format HTML"},
+        401: {"description": "Identifiants Basic manquants ou incorrects"},
+        404: {"description": "Aucun rapport généré pour l'instant"},
+    },
+    include_in_schema=False,
+)
 def drift_report(_token: str = Depends(verify_basic_auth)) -> FileResponse:
-    """Return the most recently generated Evidently drift report.
+    """Sert tel quel le rapport de dérive Evidently le plus récemment généré en CI.
 
-    404 until the first CI run (see .github/workflows/drift-report.yml) has
-    dropped a report into the reports directory.
+    Protégé par HTTP Basic (`API_TOKEN`) — voir la page Sécurité de la
+    documentation. 404 tant qu'aucun rapport n'a encore été déposé (voir
+    `.github/workflows/drift-report.yml`).
     """
     report_path = Path(get_settings().reports_dir) / "drift_report.html"
     if not report_path.exists():

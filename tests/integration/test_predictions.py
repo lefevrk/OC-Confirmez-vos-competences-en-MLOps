@@ -6,7 +6,6 @@ from sqlalchemy import delete, select
 from tests.payloads import valid_payload
 
 from api.app import app
-import api.infra.config as config_module
 from api.infra.config import get_settings
 from api.infra.metrics import INFERENCE_LATENCY, PREDICTION_DECISIONS, PREDICTION_SCORE
 from api.infra.postgres.models import PredictionEventRecord
@@ -122,8 +121,8 @@ def test_prediction_returns_a_generic_500_when_persistence_fails(monkeypatch) ->
     assert response.json() == {"detail": "internal server error"}
 
 
-def test_prediction_succeeds_without_a_token_when_authentication_is_disabled() -> None:
-    """API_TOKEN empty (the default) leaves the endpoint open, for local development."""
+def test_prediction_succeeds_with_a_valid_payload() -> None:
+    """A valid payload is scored and returned, no authentication required."""
     with TestClient(app) as client:
         response = client.post("/predictions", json=valid_payload())
     assert response.status_code == 200
@@ -220,43 +219,6 @@ def test_prediction_rejects_a_malformed_payload(monkeypatch) -> None:
     assert response.status_code == 422
     assert model.call_count == 0
     assert recorder.call_count == 0
-
-
-@pytest.fixture
-def _token_required(monkeypatch):
-    monkeypatch.setattr(config_module, "_settings", None)
-    monkeypatch.setenv("API_TOKEN", "s3cret")
-    yield "s3cret"
-    monkeypatch.setattr(config_module, "_settings", None)
-
-
-def test_prediction_requires_a_token_once_one_is_configured(_token_required) -> None:
-    """A configured API_TOKEN turns the endpoint closed by default."""
-    with TestClient(app) as client:
-        response = client.post("/predictions", json=valid_payload())
-    assert response.status_code == 401
-
-
-def test_prediction_rejects_an_incorrect_token(_token_required) -> None:
-    """A wrong Bearer token is rejected, not silently ignored."""
-    with TestClient(app) as client:
-        response = client.post(
-            "/predictions",
-            json=valid_payload(),
-            headers={"Authorization": "Bearer wrong-token"},
-        )
-    assert response.status_code == 401
-
-
-def test_prediction_succeeds_with_the_correct_token(_token_required) -> None:
-    """The right Bearer token grants access to the endpoint."""
-    with TestClient(app) as client:
-        response = client.post(
-            "/predictions",
-            json=valid_payload(),
-            headers={"Authorization": f"Bearer {_token_required}"},
-        )
-    assert response.status_code == 200
 
 
 def test_prediction_rejects_an_invalid_model_probability(monkeypatch) -> None:

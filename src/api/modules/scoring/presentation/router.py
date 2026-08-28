@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 
-from api.infra.auth import verify_token
 from api.infra.metrics import (
     INFERENCE_LATENCY,
     POSTGRES_ERRORS,
@@ -45,14 +44,34 @@ def get_recorder(request: Request) -> PredictionRecorder:
     "",
     response_model=PredictionResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(verify_token)],
+    summary="Scorer un dossier client",
+    response_description="Score calculé et décision associée",
+    responses={
+        422: {
+            "description": "Payload invalide — champ manquant, hors borne, type incorrect, "
+            'ou champ inconnu (`extra="forbid"`)'
+        },
+        500: {
+            "description": "Erreur inattendue du modèle, ou probabilité renvoyée hors de "
+            "l'intervalle [0, 1] (`InvalidProbabilityError`)"
+        },
+        503: {"description": "Modèle ou base de données indisponibles (échec au démarrage)"},
+    },
 )
 def create_prediction(
     payload: PredictionRequest,
     model: ScoringModel = Depends(get_model),
     recorder: PredictionRecorder = Depends(get_recorder),
 ) -> PredictionResponse:
-    """Score validated input with the model loaded during application startup."""
+    """Calcule un score de crédit et une décision à partir des 50 features du dossier.
+
+    Le modèle et la connexion base de données sont ceux chargés une seule
+    fois au démarrage de l'application, jamais rechargés à la volée. Chaque
+    appel réussi persiste l'événement dans PostgreSQL et alimente les
+    métriques Prometheus dédiées au scoring (score, décision, latence
+    d'inférence). Aucune authentification requise — voir la page Sécurité
+    de la documentation pour le compromis assumé.
+    """
     result = predict(model, recorder, payload.model_features())
 
     INFERENCE_LATENCY.observe(result.inference_latency_ms / 1_000)

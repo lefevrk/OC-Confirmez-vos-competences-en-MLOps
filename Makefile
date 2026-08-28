@@ -121,6 +121,25 @@ load-test-drift:
 	k6 run -e BASE_URL=$(BASE_URL) -e API_TOKEN=$(API_TOKEN) $(if $(SLEEP_SECONDS),-e SLEEP_SECONDS=$(SLEEP_SECONDS)) scripts/k6/predict_load.js
 
 #################################################################################
+# DOCUMENTATION                                                                #
+#################################################################################
+
+## Install documentation tooling (mkdocs, mkdocs-material)
+.PHONY: docs-requirements
+docs-requirements:
+	uv sync --group docs
+
+## Serve the documentation locally with live reload
+.PHONY: docs-serve
+docs-serve:
+	uv run mkdocs serve
+
+## Build the static documentation site into ./site
+.PHONY: docs-build
+docs-build:
+	uv run mkdocs build
+
+#################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################
 

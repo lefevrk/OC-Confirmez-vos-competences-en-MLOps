@@ -3,15 +3,18 @@
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+import gradio as gr
 from loguru import logger
 
 from api.bootstrap import lifespan
 from api.common.error_handling import BaseModuleErrorHandler
+from api.infra.config import get_settings
 from api.infra.observability_middleware import ObservabilityMiddleware
 from api.modules.health.router import router as health_router
 from api.modules.monitoring.router import router as monitoring_router
 from api.modules.scoring.presentation.error_handler import ScoringErrorHandler  # noqa: F401
 from api.modules.scoring.presentation.router import router as scoring_router
+from ui.blocks import PredictionApiClient, build_demo_blocks
 
 app = FastAPI(title="Credit scoring API", lifespan=lifespan)
 app.add_middleware(ObservabilityMiddleware)
@@ -41,3 +44,13 @@ async def handle_unexpected_error(request: Request, exc: Exception) -> JSONRespo
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "internal server error"},
     )
+
+
+# Mounted last and on "/" by design: Starlette matches routes in
+# registration order, so every route registered above (including FastAPI's
+# own /docs and /openapi.json) stays reachable — only paths none of them
+# claim fall through to this catch-all. Left open (no auth_dependency) so
+# the demo is reachable without setup — see docs/design/security.md.
+settings = get_settings()
+demo_client = PredictionApiClient(settings.scoring_api_url)
+gr.mount_gradio_app(app, build_demo_blocks(demo_client), path="/")

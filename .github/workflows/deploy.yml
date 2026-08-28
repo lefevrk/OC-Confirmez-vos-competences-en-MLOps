@@ -60,7 +60,6 @@ jobs:
         if: inputs.test_depth == 'full'
         env:
           API_BASE_URL: ${{ vars.PUBLIC_URL }}
-          API_TOKEN: ${{ secrets.API_TOKEN }}
         run: |
           uv sync --extra api
           uv run pytest tests/functional/ -v

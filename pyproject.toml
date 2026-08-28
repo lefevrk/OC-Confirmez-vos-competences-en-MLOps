@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/api"]
+packages = ["src/api", "src/ui"]
 
 [project]
 name = "credit-scoring-api"
-version = "0.4.0"
+version = "0.5.0"
 description = "Credit scoring API — inference service (MLOps deployment repo)"
 authors = [
   { name = "Kilian LEFEVRE" },
@@ -39,6 +39,8 @@ api = [
     "alembic",
     "mlflow",
     "prometheus-client",
+    "gradio>=4.0,<6.0",
+    "httpx",
 ]
 
 [tool.ruff]
@@ -115,4 +117,11 @@ drift = [
     "typer",
     "jupyter",
     "ipykernel",
+]
+# Documentation (mkdocs) — isolated from the default sync, same rationale
+# as `drift`: this toolchain isn't needed for day-to-day API work. CI syncs
+# it explicitly (--group docs) in .github/workflows/docs.yml.
+docs = [
+    "mkdocs",
+    "mkdocs-material",
 ]

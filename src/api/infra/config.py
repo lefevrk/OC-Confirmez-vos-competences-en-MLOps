@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # API authentication — empty disables it, useful for local development
     api_token: str = ""
 
+    # UI-to-API contract. Use the public HTTPS URL behind a reverse proxy in
+    # production; loopback avoids leaving the container in local deployments.
+    scoring_api_url: str = "http://127.0.0.1:8000"
+
     # Directory the drift report is read from (see scripts/generate_drift_report.py)
     reports_dir: str = "reports"
 
