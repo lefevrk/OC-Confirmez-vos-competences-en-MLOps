@@ -3,6 +3,10 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-yaml
+        # mkdocs.yml uses a Python-object YAML tag (custom Markdown fence
+        # renderer) that PyYAML's safe_load can't parse — mkdocs itself
+        # validates it fine (`mkdocs build --strict`).
+        exclude: ^mkdocs\.yml$
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit
