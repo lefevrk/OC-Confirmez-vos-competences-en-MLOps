@@ -15,7 +15,6 @@ class FakeHttpClient:
         self.response = response
         self.url: str | None = None
         self.json: dict | None = None
-        self.headers: dict | None = None
 
     def __enter__(self) -> "FakeHttpClient":
         """Return the fake client."""
@@ -24,9 +23,9 @@ class FakeHttpClient:
     def __exit__(self, *_args: object) -> None:
         """Implement the context manager protocol."""
 
-    def post(self, url: str, *, json: dict, headers: dict) -> httpx.Response:
+    def post(self, url: str, *, json: dict) -> httpx.Response:
         """Capture a prediction request."""
-        self.url, self.json, self.headers = url, json, headers
+        self.url, self.json = url, json
         return self.response
 
 
@@ -45,13 +44,12 @@ def test_predict_row_calls_the_public_api_with_the_form_values(monkeypatch) -> N
     )
     monkeypatch.setattr("ui.blocks.httpx.Client", lambda **_kwargs: fake_http)
 
-    result = predict_row(PredictionApiClient("https://api.example.com", "token"), *values)
+    result = predict_row(PredictionApiClient("https://api.example.com"), *values)
 
     assert "Score du modèle" in result
     assert "Refusé" in result
     assert fake_http.url == "https://api.example.com/predictions"
     assert fake_http.json == dict(zip(_ALIASES, values, strict=True))
-    assert fake_http.headers == {"Authorization": "Bearer token"}
 
 
 def test_predict_row_reports_the_accepted_decision(monkeypatch) -> None:
@@ -62,7 +60,7 @@ def test_predict_row_reports_the_accepted_decision(monkeypatch) -> None:
         httpx.Response(200, json={"probability": 0.1, "decision": 0, "model_version": "3"})
     )
     monkeypatch.setattr("ui.blocks.httpx.Client", lambda **_kwargs: fake_http)
-    result = predict_row(PredictionApiClient("https://api.example.com", ""), *values)
+    result = predict_row(PredictionApiClient("https://api.example.com"), *values)
 
     assert "Accepté" in result
 
@@ -81,7 +79,7 @@ def test_predict_row_surfaces_api_validation_errors(monkeypatch) -> None:
     monkeypatch.setattr("ui.blocks.httpx.Client", lambda **_kwargs: fake_http)
 
     with pytest.raises(gr.Error) as exc_info:
-        predict_row(PredictionApiClient("https://api.example.com", ""), *values)
+        predict_row(PredictionApiClient("https://api.example.com"), *values)
 
     message = str(exc_info.value)
     assert "AMT_CREDIT" in message
