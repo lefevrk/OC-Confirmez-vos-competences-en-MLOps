@@ -51,6 +51,23 @@ jobs:
         # container or $DATABASE_URL needed here.
         run: uv run pytest --cov=api --cov-report=term-missing --cov-fail-under=80
 
+      - name: Publish the coverage summary
+        # Same pattern as the drift report: a markdown summary in the step
+        # summary AND archived as a downloadable artifact.
+        run: |
+          mkdir -p reports
+          {
+            echo "# Rapport de couverture"
+            echo
+            uv run coverage report --format=markdown
+          } > reports/coverage_summary.md
+          cat reports/coverage_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-summary
+          path: reports/coverage_summary.md
+
   determine-target:
     needs: quality-gate
     if: >-
