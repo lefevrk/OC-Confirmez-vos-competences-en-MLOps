@@ -38,6 +38,7 @@ api = [
     "psycopg2-binary",
     "alembic",
     "mlflow",
+    "onnxruntime",
     "prometheus-client",
     "gradio>=4.0,<6.0",
     "httpx",
@@ -109,6 +110,12 @@ dev = [
     # in the default group, not `drift`, since it's the project-wide
     # convention for any script's CLI, not drift-specific tooling.
     "typer",
+    # Interactive viewer for the .prof files scripts/profiling/ produces
+    # (`uv run snakeviz reports/profiling/<label>_predict.prof`).
+    "snakeviz",
+    # Renders the before/after comparison charts in
+    # scripts/profiling/plot_comparison.py.
+    "matplotlib",
 ]
 # Data drift analysis tooling (scripts/, notebooks/) — kept out of the
 # default dev sync so day-to-day API work doesn't pay Evidently's heavier
