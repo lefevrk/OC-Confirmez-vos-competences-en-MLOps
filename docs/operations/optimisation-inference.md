@@ -69,12 +69,34 @@ Le levier le plus direct serait de sortir cet appel du chemin critique avec `fas
 
 *`uv run snakeviz reports/profiling/challenger-onnx_predict.prof`, même vue, 3 niveaux. Contraste direct avec la capture précédente : `tracking.py:46(record)` (0.406 s) occupe maintenant la totalité du graphe visible — `mlflow_model.py:27(probability)` n'apparaît même plus dans les trois premiers niveaux, sa part étant devenue trop petite pour être visuellement distincte de `record()`. La table de stats en bas de page snakeviz confirme le chiffre : `onnxruntime_inference_collection.py:308(run)` ne cumule que 0.030 s sur les 200 appels, contre 0.379 s pour le seul `session.py:1999(commit)` Postgres.*
 
-!!! note "Capture Grafana à ajouter après déploiement en production"
-    Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profiling/`), pas encore de trafic de production réel. L'alias MLflow `champion` pointe déjà vers le modèle ONNX, mais ce dépôt (le code qui sait le charger via `onnxruntime`) n'est pas encore déployé en release/production. Une fois ce code mergé et déployé (voir [CI/CD & déploiement](deployment.md)), ajouter ici une capture du dashboard Grafana (`api-overview`, section latence — voir [Monitoring & métriques](monitoring.md)) montrant la bascule visible de `credit_scoring_inference_duration_seconds` avant/après le déploiement, comme preuve en conditions réelles.
+## Confirmation en production
 
-    <!--
-    ![Latence d'inférence en production avant/après la bascule ONNX](../assets/screenshots/grafana-onnx-latency-comparison.png)
-    -->
+Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profiling/`). Le dashboard Grafana de l'environnement `release` donne le même avant/après, cette fois sur du trafic réel :
+
+=== "Avant — `champion` v4 (sklearn)"
+
+    ![Dashboard Grafana en environnement release — champion v4 (sklearn) chargé](../assets/screenshots/grafana-dashboard-release-traffic.png)
+
+    *`Model loaded: champion — v4`. Inférence p95 = 94.7 ms, p99 = 200 ms.*
+
+=== "Après — `champion` v5 (ONNX)"
+
+    ![Dashboard Grafana en environnement release — champion v5 (ONNX) chargé](../assets/screenshots/grafana-dashboard-onnx-champion.png)
+
+    *`Model loaded: champion — v5`. Inférence p95 = 5.00 ms, p99 = 9.49 ms.*
+
+| Métrique (`api-overview`, environnement `release`, ~10 req/s) | Avant (v4, sklearn) | Après (v5, ONNX) | Gain |
+|---|:---:|:---:|:---:|
+| Inférence p95 | 94.7 ms | 5.00 ms | **~19×** |
+| Inférence p99 | 200 ms | 9.49 ms | **~21×** |
+| HTTP `/predictions` p50 | 177 ms | 78.6 ms | ~2,3× |
+| HTTP `/predictions` p95 | 372 ms | 191 ms | ~1,9× |
+| HTTP `/predictions` p99 | 474 ms | 239 ms | ~2× |
+| CPU total (conteneurs app) | 37.2 % | 87.2 % | ⚠️ +50 pts |
+
+Les deux captures viennent de la même fenêtre de dashboard (30 dernières minutes), à un trafic comparable (9.56 vs 10.4 req/s) — le gain d'inférence (~19-21×) confirme en conditions réelles ce que montrait déjà le profiling local, et explique une bonne partie du gain sur la latence HTTP totale (le reste venant de `persistence`, le goulot désormais dominant identifié plus haut).
+
+**Point à surveiller, non expliqué par ce travail** : le CPU des conteneurs applicatifs passe de 37 % à 87 % entre les deux captures. `onnxruntime` crée sa session sans réglage explicite de threads (voir [Stratégie retenue](#strategie-retenue) et `references/OPTIMISATION_ONNX.md`) — probablement plus de threads utilisés en parallèle pour aller plus vite, donc plus de CPU consommé pour une latence par requête plus basse. Pas un problème en soi (CPU encore loin de la saturation), mais à garder en tête avant d'augmenter significativement le trafic sans revisiter la configuration de threading `onnxruntime`.
 
 ## Reproduire
 
