@@ -24,6 +24,10 @@ theme:
     - content.code.annotate
     - search.suggest
 
+plugins:
+  - search
+  - glightbox
+
 nav:
   - Accueil: index.md
   - Démarrage:

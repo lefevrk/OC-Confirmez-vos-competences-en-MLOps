@@ -134,4 +134,5 @@ drift = [
 docs = [
     "mkdocs",
     "mkdocs-material",
+    "mkdocs-glightbox",
 ]
