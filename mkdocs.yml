@@ -1,0 +1,70 @@
+site_name: Credit Scoring API
+site_description: API de scoring crédit — service d'inférence, monitoring et CI/CD.
+repo_url: https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps
+repo_name: lefevrk/OC-Confirmez-vos-competences-en-MLOps
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: fr
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Basculer en mode sombre
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Basculer en mode clair
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+
+nav:
+  - Accueil: index.md
+  - Démarrage:
+      - Installation & configuration: getting-started/configuration.md
+      - Services externes:
+          - Grafana Cloud: getting-started/services/grafana-cloud.md
+          - Supabase: getting-started/services/supabase.md
+          - Bucket Hugging Face: getting-started/services/huggingface-bucket.md
+  - Conception:
+      - Architecture: design/architecture.md
+      - Référence API:
+          - Vue d'ensemble: design/api/index.md
+          - Scoring: design/api/scoring.md
+          - Health & readiness: design/api/health.md
+          - Monitoring: design/api/monitoring.md
+      - Modèle de scoring: design/model.md
+      - Sécurité: design/security.md
+  - Opérations:
+      - Démo Gradio: operations/demo.md
+      - Monitoring & métriques: operations/monitoring.md
+      - Génération du trafic de drift: operations/drift-generation.md
+      - Analyse du drift: operations/drift-analysis.md
+      - CI/CD & déploiement: operations/deployment.md
+      - Tests & qualité: operations/testing.md
+
+extra_css:
+  - stylesheets/extra.css
+
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true

@@ -118,3 +118,10 @@ drift = [
     "jupyter",
     "ipykernel",
 ]
+# Documentation (mkdocs) — isolated from the default sync, same rationale
+# as `drift`: this toolchain isn't needed for day-to-day API work. CI syncs
+# it explicitly (--group docs) in .github/workflows/docs.yml.
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+]

@@ -1,0 +1,11 @@
+/* Center Mermaid diagrams rendered by mkdocs-material */
+.md-typeset .mermaid {
+  display: flex;
+  justify-content: center;
+}
+
+/* Center standalone content images (charts, screenshots) — icons/emoji are unaffected */
+.md-typeset p > img:only-child {
+  display: block;
+  margin: 1em auto;
+}
