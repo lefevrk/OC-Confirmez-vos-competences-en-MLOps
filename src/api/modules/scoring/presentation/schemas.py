@@ -167,7 +167,10 @@ class PredictionRequest(BaseModel):
 class PredictionResponse(BaseModel):
     """Scoring response returned by the predictions endpoint."""
 
-    prediction_id: str
-    probability: float
-    decision: int
-    model_version: str
+    prediction_id: str = Field(description="Identifiant unique (UUID) de cette prédiction")
+    probability: float = Field(
+        description="Score du modèle — pas une probabilité de défaut calibrée, "
+        "seulement une valeur à comparer au seuil de décision"
+    )
+    decision: int = Field(description="1 = dossier refusé (probability >= seuil), 0 = accepté")
+    model_version: str = Field(description="Version MLflow du modèle champion ayant scoré")
