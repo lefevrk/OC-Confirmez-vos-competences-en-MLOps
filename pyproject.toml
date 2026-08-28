@@ -105,6 +105,10 @@ dev = [
     "pre-commit>=4.6.0",
     "pyright>=1.1.409",
     "testcontainers[postgres]",
+    # CLI framework for scripts/ entry points (drift, profiling, ...) — kept
+    # in the default group, not `drift`, since it's the project-wide
+    # convention for any script's CLI, not drift-specific tooling.
+    "typer",
 ]
 # Data drift analysis tooling (scripts/, notebooks/) — kept out of the
 # default dev sync so day-to-day API work doesn't pay Evidently's heavier
@@ -114,7 +118,6 @@ drift = [
     "pyarrow",
     "evidently",
     "huggingface_hub",
-    "typer",
     "jupyter",
     "ipykernel",
 ]

@@ -1112,6 +1112,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "testcontainers" },
+    { name = "typer" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -1123,7 +1124,6 @@ drift = [
     { name = "ipykernel" },
     { name = "jupyter" },
     { name = "pyarrow" },
-    { name = "typer" },
 ]
 
 [package.metadata]
@@ -1156,6 +1156,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff", specifier = ">=0.14.14" },
     { name = "testcontainers", extras = ["postgres"] },
+    { name = "typer" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -1167,7 +1168,6 @@ drift = [
     { name = "ipykernel" },
     { name = "jupyter" },
     { name = "pyarrow" },
-    { name = "typer" },
 ]
 
 [[package]]
