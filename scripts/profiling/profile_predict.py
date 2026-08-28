@@ -24,6 +24,7 @@ Run (depuis la racine du dépôt, comme les autres scripts de scripts/) :
 
 import cProfile
 from datetime import UTC, datetime
+import json
 from pathlib import Path
 import pstats
 from time import perf_counter
@@ -34,6 +35,7 @@ from scripts.profiling.bottleneck import (
     load_sample_features,
     render_markdown_report,
     stage_stats,
+    stats_to_json,
 )
 import typer
 
@@ -139,9 +141,10 @@ def main(
         )
     print(f"\nGoulot identifié : {bottleneck}")
 
+    generated_at = datetime.now(UTC).isoformat()
     report = render_markdown_report(
         label=label,
-        generated_at=datetime.now(UTC).isoformat(),
+        generated_at=generated_at,
         model_version=model.version,
         sample_size=samples,
         stages=all_stages,
@@ -150,6 +153,21 @@ def main(
     report_path = reports_dir / f"{label}_bottleneck_report.md"
     report_path.write_text(report)
     print(f"Rapport écrit dans {report_path}")
+
+    stats_path = reports_dir / f"{label}_stats.json"
+    stats_path.write_text(
+        json.dumps(
+            stats_to_json(
+                label=label,
+                generated_at=generated_at,
+                model_version=model.version,
+                sample_size=samples,
+                stages=all_stages,
+            ),
+            indent=2,
+        )
+    )
+    print(f"Stats JSON écrites dans {stats_path} (pour scripts/profiling/plot_comparison.py)")
 
 
 if __name__ == "__main__":
