@@ -2,11 +2,11 @@
 
 Étape 4 du cahier des charges : partir des données de monitoring réelles pour identifier un goulot d'étranglement, tester une stratégie d'optimisation, et prouver le gain sans régression. Contrainte du projet : la mécanique MLflow reste la source de vérité du modèle servi — pas de fichier modèle posé sur disque en dehors du registre, contrairement à une conversion ONNX qui bypasserait MLflow au moment du serving.
 
-Ce dépôt ne fait pas l'entraînement ni la conversion (voir [Modèle de scoring](../design/model.md)) — la conversion ONNX et sa validation de non-régression ont été faites dans le dépôt d'entraînement, sur un modèle enregistré sous l'alias `challenger` (registre `credit_scoring`, même mécanique que `champion`).
+Ce dépôt ne fait pas l'entraînement ni la conversion (voir [Modèle de scoring](../design/model.md)) — la conversion ONNX et sa validation de non-régression ont été faites dans le dépôt d'entraînement, d'abord enregistrées sous l'alias `challenger` (registre `credit_scoring`) pour comparaison, comme décrit ci-dessous. **Après validation, ce modèle ONNX a été promu sur l'alias `champion`** ; l'ancien champion sklearn reste accessible sous l'alias `sklearn-champion` (rollback possible en un `MODEL_ALIAS=sklearn-champion` + redéploiement, sans changement de code — voir [Modèle de scoring](../design/model.md)).
 
 ## Goulot identifié
 
-Mesuré en local avec `scripts/profiling/profile_predict.py` (voir [Tests & qualité](testing.md) pour le lancer), 200 appels contre le champion sklearn (v4) alors en place :
+Mesuré en local avec `scripts/profiling/profile_predict.py` (voir [Tests & qualité](testing.md) pour le lancer), 200 appels contre le modèle alors champion — sklearn v4, aujourd'hui accessible sous l'alias `sklearn-champion` :
 
 | Étage | Moyenne | Part du temps atomique |
 |---|---|---|
@@ -24,13 +24,13 @@ Le détail fonction par fonction (`cProfile`, voir le `.prof` du même run) mont
 
 Conversion du pipeline (preprocessing + LightGBM) en un graphe ONNX unique dans le dépôt d'entraînement, ce qui élimine précisément ce dispatch Python/joblib par appel. Côté serving, `src/api/infra/mlflow_model.py` charge ce graphe **directement via `onnxruntime`** plutôt que par `mlflow.pyfunc.load_model` générique — le wrapper `pyfunc` intégré de `mlflow.onnx` ne marshalle pas correctement un graphe à 50 entrées nommées séparément et de types mixtes (float/string), reproduit et documenté lors de l'implémentation.
 
-Compromis assumé : `mlflow_model.py` n'est plus totalement agnostique du format de modèle (il sait qu'il charge un graphe ONNX). La résolution par alias MLflow (`champion`/`challenger`), le téléchargement et la validation du `threshold.json` restent inchangés — seul le format du fichier modèle chargé a changé.
+Compromis assumé : `mlflow_model.py` n'est plus totalement agnostique du format de modèle (il sait qu'il charge un graphe ONNX). La résolution par alias MLflow, le téléchargement et la validation du `threshold.json` restent inchangés — seul le format du fichier modèle chargé a changé. C'est justement ce qui rend la promotion (`challenger` → `champion`) transparente pour ce dépôt : aucun changement de code n'a été nécessaire, seul l'alias MLflow a été redirigé côté dépôt d'entraînement.
 
 ## Validation de non-régression
 
-Comparaison `@champion` (v4, sklearn) vs `@challenger` (v5, ONNX) sur le même jeu de test, au même seuil de décision (0.53), faite dans le dépôt d'entraînement :
+Comparaison entre l'ancien champion (v4, sklearn — alias `sklearn-champion` depuis la promotion) et le candidat ONNX (v5, alias `champion` depuis la promotion) sur le même jeu de test, au même seuil de décision (0.53), faite dans le dépôt d'entraînement :
 
-| Métrique | Champion (sklearn) | Challenger (ONNX) | Écart |
+| Métrique | `sklearn-champion` (v4) | `champion` (v5, ONNX) | Écart |
 |---|:---:|:---:|:---:|
 | ROC-AUC | 0.7804 | 0.7804 | -7.8e-07 |
 | Log loss | 0.5256 | 0.5256 | +1.3e-06 |
@@ -43,13 +43,13 @@ Comparaison `@champion` (v4, sklearn) vs `@challenger` (v5, ONNX) sur le même j
 
 ## Résultat mesuré
 
-Même protocole de profiling, 200 appels, rejoué contre le challenger ONNX :
+Même protocole de profiling, 200 appels, rejoué contre le modèle ONNX (alors `challenger`, aujourd'hui `champion`) :
 
 ![Latence par étage avant/après optimisation ONNX](../assets/model/onnx_inference_latency_comparison.png)
 
 *Généré par `make plot-profile-comparison` à partir de deux runs `scripts/profiling/profile_predict.py` (`reports/profiling/baseline-sklearn_stats.json` et `challenger-onnx_stats.json`, non commités).*
 
-| Étage | Champion (sklearn) | Challenger (ONNX) | Gain |
+| Étage | `sklearn-champion` (v4) | `champion` (v5, ONNX) | Gain |
 |---|:---:|:---:|:---:|
 | `inference` | 2.251 ms | 0.107–0.266 ms selon le run | **~8 à 20×** plus rapide |
 | `persistence` | 1.999 ms | 1.810–3.291 ms | inchangé (bruit Postgres normal, indépendant du modèle) |
@@ -69,8 +69,8 @@ Le levier le plus direct serait de sortir cet appel du chemin critique avec `fas
 
 *`uv run snakeviz reports/profiling/challenger-onnx_predict.prof`, même vue, 3 niveaux. Contraste direct avec la capture précédente : `tracking.py:46(record)` (0.406 s) occupe maintenant la totalité du graphe visible — `mlflow_model.py:27(probability)` n'apparaît même plus dans les trois premiers niveaux, sa part étant devenue trop petite pour être visuellement distincte de `record()`. La table de stats en bas de page snakeviz confirme le chiffre : `onnxruntime_inference_collection.py:308(run)` ne cumule que 0.030 s sur les 200 appels, contre 0.379 s pour le seul `session.py:1999(commit)` Postgres.*
 
-!!! note "Capture Grafana à ajouter après promotion en production"
-    Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profiling/`), pas encore de trafic de production réel. Une fois le challenger promu sur l'alias `champion` et redéployé, ajouter ici une capture du dashboard Grafana (`api-overview`, section latence — voir [Monitoring & métriques](monitoring.md)) montrant la bascule visible de `credit_scoring_inference_duration_seconds` avant/après le déploiement, comme preuve en conditions réelles.
+!!! note "Capture Grafana à ajouter après déploiement en production"
+    Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profiling/`), pas encore de trafic de production réel. L'alias MLflow `champion` pointe déjà vers le modèle ONNX, mais ce dépôt (le code qui sait le charger via `onnxruntime`) n'est pas encore déployé en release/production. Une fois ce code mergé et déployé (voir [CI/CD & déploiement](deployment.md)), ajouter ici une capture du dashboard Grafana (`api-overview`, section latence — voir [Monitoring & métriques](monitoring.md)) montrant la bascule visible de `credit_scoring_inference_duration_seconds` avant/après le déploiement, comme preuve en conditions réelles.
 
     <!--
     ![Latence d'inférence en production avant/après la bascule ONNX](../assets/screenshots/grafana-onnx-latency-comparison.png)
@@ -82,9 +82,9 @@ Le levier le plus direct serait de sortir cet appel du chemin critique avec `fas
 docker compose up -d postgres
 make db-migrate
 
-# Pointer temporairement MODEL_ALIAS sur le champion actuel puis sur le challenger
-# (voir .env) et relancer le profiling pour chacun :
-SAMPLES=200 LABEL=baseline-sklearn make profile-predict
+# Ancien champion (sklearn, alias `sklearn-champion` depuis la promotion) :
+MODEL_ALIAS=sklearn-champion SAMPLES=200 LABEL=baseline-sklearn make profile-predict
+# Modèle optimisé (ONNX, alias `champion` depuis la promotion — celui de .env par défaut) :
 SAMPLES=200 LABEL=challenger-onnx make profile-predict
 
 make plot-profile-comparison

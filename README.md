@@ -157,16 +157,6 @@ curl http://localhost:8000/ready
 - 88 tests, 100 % de couverture, pipeline CI/CD entièrement automatisé (5 workflows GitHub Actions) — détail dans [Tests & qualité](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/operations/testing/).
 - Détection de drift automatisée (Evidently AI), sans intervention manuelle.
 
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Optimisation des performances d'inférence (profilage, quantification)
-- [ ] Circuit d'approbation/contestation humaine (hors périmètre applicatif actuel)
-
-Voir les [issues ouvertes](https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/issues) pour la liste complète des demandes.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
 
