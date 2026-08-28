@@ -121,6 +121,35 @@ load-test-drift:
 	k6 run -e BASE_URL=$(BASE_URL) -e API_TOKEN=$(API_TOKEN) $(if $(SLEEP_SECONDS),-e SLEEP_SECONDS=$(SLEEP_SECONDS)) scripts/k6/predict_load.js
 
 #################################################################################
+# PROFILING / OPTIMISATION (ÉTAPE 4)                                           #
+#################################################################################
+
+# Overridable on the command line, e.g. `make profile-predict SAMPLES=200 LABEL=onnx-candidate`
+SAMPLES ?= 50
+WARMUP ?= 10
+LABEL ?= run
+
+## Profile the real request path (writes reports/profiling/<label>_*)
+.PHONY: profile-predict
+profile-predict:
+	uv run python -m scripts.profiling.profile_predict --samples $(SAMPLES) --warmup $(WARMUP) --label $(LABEL)
+
+# Overridable on the command line, e.g. `make plot-profile-comparison BASELINE=baseline-sklearn CHALLENGER=challenger-onnx`
+BASELINE ?= baseline-sklearn
+CHALLENGER ?= challenger-onnx
+BASELINE_NAME ?= Champion (sklearn)
+CHALLENGER_NAME ?= Challenger (ONNX)
+COMPARISON_OUTPUT ?= docs/assets/model/onnx_inference_latency_comparison.png
+
+## Plot a before/after latency chart from two profile-predict runs
+.PHONY: plot-profile-comparison
+plot-profile-comparison:
+	uv run python -m scripts.profiling.plot_comparison \
+		--baseline $(BASELINE) --baseline-name "$(BASELINE_NAME)" \
+		--challenger $(CHALLENGER) --challenger-name "$(CHALLENGER_NAME)" \
+		--output $(COMPARISON_OUTPUT)
+
+#################################################################################
 # DOCUMENTATION                                                                #
 #################################################################################
 

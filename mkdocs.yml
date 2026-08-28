@@ -24,6 +24,10 @@ theme:
     - content.code.annotate
     - search.suggest
 
+plugins:
+  - search
+  - glightbox
+
 nav:
   - Accueil: index.md
   - Démarrage:
@@ -34,6 +38,7 @@ nav:
           - Bucket Hugging Face: getting-started/services/huggingface-bucket.md
   - Conception:
       - Architecture: design/architecture.md
+      - Stockage des données: design/data-storage.md
       - Référence API:
           - Vue d'ensemble: design/api/index.md
           - Scoring: design/api/scoring.md
@@ -46,6 +51,7 @@ nav:
       - Monitoring & métriques: operations/monitoring.md
       - Génération du trafic de drift: operations/drift-generation.md
       - Analyse du drift: operations/drift-analysis.md
+      - Optimisation d'inférence (ONNX): operations/optimisation-inference.md
       - CI/CD & déploiement: operations/deployment.md
       - Tests & qualité: operations/testing.md
 

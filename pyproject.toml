@@ -7,7 +7,7 @@ packages = ["src/api", "src/ui"]
 
 [project]
 name = "credit-scoring-api"
-version = "0.5.0"
+version = "0.6.0"
 description = "Credit scoring API — inference service (MLOps deployment repo)"
 authors = [
   { name = "Kilian LEFEVRE" },
@@ -38,6 +38,7 @@ api = [
     "psycopg2-binary",
     "alembic",
     "mlflow",
+    "onnxruntime",
     "prometheus-client",
     "gradio>=4.0,<6.0",
     "httpx",
@@ -105,6 +106,16 @@ dev = [
     "pre-commit>=4.6.0",
     "pyright>=1.1.409",
     "testcontainers[postgres]",
+    # CLI framework for scripts/ entry points (drift, profiling, ...) — kept
+    # in the default group, not `drift`, since it's the project-wide
+    # convention for any script's CLI, not drift-specific tooling.
+    "typer",
+    # Interactive viewer for the .prof files scripts/profiling/ produces
+    # (`uv run snakeviz reports/profiling/<label>_predict.prof`).
+    "snakeviz",
+    # Renders the before/after comparison charts in
+    # scripts/profiling/plot_comparison.py.
+    "matplotlib",
 ]
 # Data drift analysis tooling (scripts/, notebooks/) — kept out of the
 # default dev sync so day-to-day API work doesn't pay Evidently's heavier
@@ -114,7 +125,6 @@ drift = [
     "pyarrow",
     "evidently",
     "huggingface_hub",
-    "typer",
     "jupyter",
     "ipykernel",
 ]
@@ -124,4 +134,5 @@ drift = [
 docs = [
     "mkdocs",
     "mkdocs-material",
+    "mkdocs-glightbox",
 ]

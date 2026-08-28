@@ -1,6 +1,6 @@
 # Modèle de scoring
 
-Ce dépôt ne fait pas l'entraînement du modèle — c'est le dépôt de **déploiement** (voir [Accueil](../index.md)). Cette page documente le champion résolu depuis le registre MLflow externe au démarrage (`src/api/infra/mlflow_model.py`) : registre `credit_scoring`, alias `champion`, **version 4**, run `reduced-feature-finetuning-scale-pos-weight` (`8c5fbb02458f4fe3af0df07975e10621`), régénérée le 2026-08-27. Tenue à jour automatiquement — à chaque push touchant la doc, et sur demande (`workflow_dispatch`, voir [CI/CD & déploiement](../operations/deployment.md)).
+Ce dépôt ne fait pas l'entraînement du modèle — c'est le dépôt de **déploiement** (voir [Accueil](../index.md)). Cette page documente le champion résolu depuis le registre MLflow externe au démarrage (`src/api/infra/mlflow_model.py`) : registre `credit_scoring`, alias `champion`, **version 5**, run `champion-onnx-conversion` (`a0d19fea77ff466dbb279128fd5a4f8d`), régénérée le 2026-08-28. Tenue à jour automatiquement — à chaque push touchant la doc, et sur demande (`workflow_dispatch`, voir [CI/CD & déploiement](../operations/deployment.md)).
 
 <div class="grid cards" markdown>
 
@@ -32,7 +32,7 @@ Ce dépôt ne fait pas l'entraînement du modèle — c'est le dépôt de **dép
 
     ---
 
-    ### v4
+    ### v5
 
     alias `champion`
 
@@ -59,9 +59,9 @@ Ce dépôt ne fait pas l'entraînement du modèle — c'est le dépôt de **dép
     | Recall | 0.6528 |  |
     | F1 | 0.3035 |  |
     | Log loss | 0.5256 |  |
-    | Brier score | 0.1766 |  |
+    | Brier score | 0.1767 |  |
     | Coût métier | 0.4942 | fonction de coût définie dans le dépôt d'entraînement (pas documentée ici) |
-    | Temps d'inférence | 1.7138 ms | mesuré côté entraînement |
+    | Temps d'inférence | 0.0678 ms | mesuré côté entraînement |
 
 === "Hyperparamètres"
 
