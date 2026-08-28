@@ -1,43 +1,18 @@
-"""Token-based authentication, shared across presentation modules.
+"""Token-based authentication for GET /evidently — the only route still gated.
 
-Two schemes, same underlying secret (API_TOKEN — there's no separate user
-directory, just a single shared token): Bearer for API clients
-(`/predictions`), Basic for anything meant to be opened directly in a
-browser (`/evidently`) — browsers only prompt their native login popup for
+`/predictions` and `/` (the Gradio demo) are intentionally left open (see
+docs/design/security.md) so the API and demo are reachable without setup.
+Basic is used here rather than Bearer because it's meant to be opened
+directly in a browser — browsers only prompt their native login popup for
 Basic Auth, not for an arbitrary Bearer header.
 """
 
 from fastapi import Depends, HTTPException, status
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBasic,
-    HTTPBasicCredentials,
-    HTTPBearer,
-)
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from api.infra.config import get_settings
 
-security = HTTPBearer(auto_error=False)
 basic_security = HTTPBasic(auto_error=False)
-
-
-def verify_token(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> str:
-    """Verify the Bearer token. Returns 401 if missing or invalid.
-
-    If API_TOKEN is not set (empty), authentication is disabled — handy for
-    local development.
-    """
-    api_token = get_settings().api_token
-    if not api_token:
-        return ""
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="missing token, use Authorization: Bearer <token>",
-        )
-    if credentials.credentials != api_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
-    return credentials.credentials
 
 
 def verify_basic_auth(

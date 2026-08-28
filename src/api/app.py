@@ -14,7 +14,6 @@ from api.modules.health.router import router as health_router
 from api.modules.monitoring.router import router as monitoring_router
 from api.modules.scoring.presentation.error_handler import ScoringErrorHandler  # noqa: F401
 from api.modules.scoring.presentation.router import router as scoring_router
-from ui.auth import verify_demo_auth
 from ui.blocks import PredictionApiClient, build_demo_blocks
 
 app = FastAPI(title="Credit scoring API", lifespan=lifespan)
@@ -50,7 +49,8 @@ async def handle_unexpected_error(request: Request, exc: Exception) -> JSONRespo
 # Mounted last and on "/" by design: Starlette matches routes in
 # registration order, so every route registered above (including FastAPI's
 # own /docs and /openapi.json) stays reachable — only paths none of them
-# claim fall through to this catch-all.
+# claim fall through to this catch-all. Left open (no auth_dependency) so
+# the demo is reachable without setup — see docs/design/security.md.
 settings = get_settings()
-demo_client = PredictionApiClient(settings.scoring_api_url, settings.api_token)
-gr.mount_gradio_app(app, build_demo_blocks(demo_client), path="/", auth_dependency=verify_demo_auth)
+demo_client = PredictionApiClient(settings.scoring_api_url)
+gr.mount_gradio_app(app, build_demo_blocks(demo_client), path="/")
