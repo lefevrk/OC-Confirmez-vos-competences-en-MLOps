@@ -16,6 +16,10 @@ Mesuré en local avec `scripts/profiling/profile_predict.py` (voir [Tests & qual
 
 Le détail fonction par fonction (`cProfile`, voir le `.prof` du même run) montre que `inference` n'est pas dominé par le calcul LightGBM lui-même, mais par le **preprocessing scikit-learn** (`ColumnTransformer.transform`) et un **overhead `joblib.parallel`** — la pipeline sklearn dispatche son travail en parallèle même pour une seule ligne à la fois, ce qui est du pur overhead dans ce contexte de scoring unitaire.
 
+![Visualisation snakeviz du profil sklearn — predict() se scinde en probability (1.24s) et record (0.683s)](../assets/model/snakeviz_baseline_sklearn.png)
+
+*`uv run snakeviz reports/profiling/baseline-sklearn_predict.prof`, vue icicle limitée à 3 niveaux. `predict()` (1.96 s cumulées sur 200 appels) se scinde presque à parts égales entre `mlflow_model.py:27(probability)` (1.24 s) et `tracking.py:46(record)` (0.683 s) — visuellement, la moitié gauche confirme le tableau ci-dessus. Un niveau plus bas, `probability` passe déjà par `pipeline.py:882(predict_proba)` (1.03 s) : la quasi-totalité du temps d'inférence est déjà dans la pipeline sklearn avant même d'atteindre le modèle LightGBM lui-même.*
+
 ## Stratégie retenue
 
 Conversion du pipeline (preprocessing + LightGBM) en un graphe ONNX unique dans le dépôt d'entraînement, ce qui élimine précisément ce dispatch Python/joblib par appel. Côté serving, `src/api/infra/mlflow_model.py` charge ce graphe **directement via `onnxruntime`** plutôt que par `mlflow.pyfunc.load_model` générique — le wrapper `pyfunc` intégré de `mlflow.onnx` ne marshalle pas correctement un graphe à 50 entrées nommées séparément et de types mixtes (float/string), reproduit et documenté lors de l'implémentation.
@@ -52,6 +56,10 @@ Même protocole de profiling, 200 appels, rejoué contre le challenger ONNX :
 | **Goulot dominant** | `inference` (53 %) | `persistence` (92–94 %) | le modèle n'est plus le facteur limitant |
 
 L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant. C'est un **second goulot, indépendant du modèle**, hors scope de cette optimisation (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé) ; à traiter séparément si nécessaire (écriture asynchrone, batching...).
+
+![Visualisation snakeviz du profil ONNX — persistence (Postgres) occupe tout le graphe, l'inférence a disparu](../assets/model/snakeviz_challenger_onnx.png)
+
+*`uv run snakeviz reports/profiling/challenger-onnx_predict.prof`, même vue, 3 niveaux. Contraste direct avec la capture précédente : `tracking.py:46(record)` (0.406 s) occupe maintenant la totalité du graphe visible — `mlflow_model.py:27(probability)` n'apparaît même plus dans les trois premiers niveaux, sa part étant devenue trop petite pour être visuellement distincte de `record()`. La table de stats en bas de page snakeviz confirme le chiffre : `onnxruntime_inference_collection.py:308(run)` ne cumule que 0.030 s sur les 200 appels, contre 0.379 s pour le seul `session.py:1999(commit)` Postgres.*
 
 !!! note "Capture Grafana à ajouter après promotion en production"
     Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profiling/`), pas encore de trafic de production réel. Une fois le challenger promu sur l'alias `champion` et redéployé, ajouter ici une capture du dashboard Grafana (`api-overview`, section latence — voir [Monitoring & métriques](monitoring.md)) montrant la bascule visible de `credit_scoring_inference_duration_seconds` avant/après le déploiement, comme preuve en conditions réelles.
