@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 
-from api.infra.auth import verify_token
 from api.infra.metrics import (
     INFERENCE_LATENCY,
     POSTGRES_ERRORS,
@@ -45,7 +44,6 @@ def get_recorder(request: Request) -> PredictionRecorder:
     "",
     response_model=PredictionResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(verify_token)],
 )
 def create_prediction(
     payload: PredictionRequest,

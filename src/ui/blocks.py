@@ -24,21 +24,17 @@ _ALIASES = [field.alias or name for name, field in PredictionRequest.model_field
 class PredictionApiClient:
     """Small HTTP client for the API contract consumed by the UI."""
 
-    def __init__(self, base_url: str, token: str, timeout_seconds: float = 15.0) -> None:
-        """Configure the scoring API endpoint and its optional Bearer token."""
+    def __init__(self, base_url: str, timeout_seconds: float = 15.0) -> None:
+        """Configure the scoring API endpoint."""
         self._base_url = base_url.rstrip("/")
-        self._token = token
         self._timeout_seconds = timeout_seconds
 
     def predict(self, values: list[Any]) -> dict[str, Any]:
         """Submit raw form values and return the API's JSON response."""
-        headers = {"Authorization": f"Bearer {self._token}"} if self._token else {}
         payload = dict(zip(_ALIASES, values, strict=True))
         try:
             with httpx.Client(timeout=self._timeout_seconds) as client:
-                response = client.post(
-                    f"{self._base_url}/predictions", json=payload, headers=headers
-                )
+                response = client.post(f"{self._base_url}/predictions", json=payload)
         except httpx.RequestError as exc:
             raise gr.Error(
                 "Le service de prédiction est injoignable, réessayez plus tard."
@@ -46,8 +42,6 @@ class PredictionApiClient:
 
         if response.status_code == 422:
             raise gr.Error(_format_validation_error(response.json()))
-        if response.status_code == 401:
-            raise gr.Error("La démo ne peut pas s'authentifier auprès de l'API.")
         if response.status_code == 503:
             raise gr.Error("Le service de prédiction est indisponible, réessayez plus tard.")
         if response.is_error:
