@@ -55,7 +55,15 @@ Même protocole de profiling, 200 appels, rejoué contre le challenger ONNX :
 | `persistence` | 1.999 ms | 1.810–3.291 ms | inchangé (bruit Postgres normal, indépendant du modèle) |
 | **Goulot dominant** | `inference` (53 %) | `persistence` (92–94 %) | le modèle n'est plus le facteur limitant |
 
-L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant. C'est un **second goulot, indépendant du modèle**, hors scope de cette optimisation (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé) ; à traiter séparément si nécessaire (écriture asynchrone, batching...).
+L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant. C'est un **second goulot, indépendant du modèle**, hors scope de cette optimisation (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé).
+
+### Piste identifiée pour `persistence`, non implémentée
+
+Le coût dominant (`session.commit()`, ~400 appels `psycopg2.cursor.execute` pour 200 prédictions dans le profil) est un aller-retour réseau + commit synchrone **par ligne**, payé en plein par le client puisque `create_prediction` (`router.py`) attend `recorder.record()` avant de répondre.
+
+Le levier le plus direct serait de sortir cet appel du chemin critique avec `fastapi.BackgroundTasks` : la tâche s'exécute après l'envoi de la réponse, donc le client ne paie plus ce coût dans sa latence perçue — sans changer le débit ni la charge réelle sur Postgres.
+
+**Non retenu pour l'instant** : ça affaiblit la garantie associée à une réponse `200` — elle ne signifierait plus « la prédiction est déjà persistée », seulement « le modèle a scoré ». En cas de crash du process entre l'envoi de la réponse et l'exécution de la tâche en arrière-plan, l'événement serait silencieusement perdu, ce qui va à l'encontre du point de vigilance de l'Étape 4 (« assurez-vous que les optimisations n'introduisent pas de régressions ») — ici, une régression de durabilité plutôt que de précision du modèle, mais une régression tout de même. À reconsidérer seulement si une garantie de rattrapage est ajoutée en parallèle (ex. file d'attente durable, retry avec dead-letter) — hors scope de ce travail d'optimisation modèle.
 
 ![Visualisation snakeviz du profil ONNX — persistence (Postgres) occupe tout le graphe, l'inférence a disparu](../assets/model/snakeviz_challenger_onnx.png)
 
