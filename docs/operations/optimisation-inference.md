@@ -96,7 +96,7 @@ Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profilin
 
 Les deux captures viennent de la même fenêtre de dashboard (30 dernières minutes), à un trafic comparable (9.56 vs 10.4 req/s) — le gain d'inférence (~19-21×) confirme en conditions réelles ce que montrait déjà le profiling local, et explique une bonne partie du gain sur la latence HTTP totale (le reste venant de `persistence`, le goulot désormais dominant identifié plus haut).
 
-**Point à surveiller, non expliqué par ce travail** : le CPU des conteneurs applicatifs passe de 37 % à 87 % entre les deux captures. `onnxruntime` crée sa session sans réglage explicite de threads (voir [Stratégie retenue](#strategie-retenue) et `references/OPTIMISATION_ONNX.md`) — probablement plus de threads utilisés en parallèle pour aller plus vite, donc plus de CPU consommé pour une latence par requête plus basse. Pas un problème en soi (CPU encore loin de la saturation), mais à garder en tête avant d'augmenter significativement le trafic sans revisiter la configuration de threading `onnxruntime`.
+**Point à surveiller, non expliqué par ce travail** : le CPU des conteneurs applicatifs passe de 37 % à 87 % entre les deux captures. `onnxruntime` crée sa session sans réglage explicite de threads (voir [Stratégie retenue](#strategie-retenue) et `src/api/infra/mlflow_model.py`) — probablement plus de threads utilisés en parallèle pour aller plus vite, donc plus de CPU consommé pour une latence par requête plus basse. Pas un problème en soi (CPU encore loin de la saturation), mais à garder en tête avant d'augmenter significativement le trafic sans revisiter la configuration de threading `onnxruntime`.
 
 ## Reproduire
 

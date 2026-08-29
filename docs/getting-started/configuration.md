@@ -39,10 +39,11 @@ Groupes de dépendances additionnels, installés séparément pour ne pas alourd
 
     ```bash
     uv sync --extra api
+    make db-migrate
     make run
     ```
 
-    L'API écoute sur `http://localhost:8000`.
+    Suppose une base PostgreSQL déjà lancée (par exemple `docker compose up -d postgres`) et les variables d'environnement déjà configurées (section suivante). `make db-migrate` applique les migrations sur cette base, puis `make run` démarre l'API en local avec autoreload sur `http://localhost:8000`.
 
 ## Variables d'environnement
 
