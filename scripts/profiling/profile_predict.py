@@ -7,12 +7,13 @@ Postgres database, broken down stage by stage (validation, inference,
 persistence, end-to-end), plus a cProfile pass over the end-to-end call for
 a function-level breakdown.
 
-Étape 4 du cahier des charges (`references/PROJET.md`) demande de partir des
-données de monitoring réelles pour identifier les goulots d'étranglement
-avant de tester une optimisation. Les métriques déjà en prod (histogramme
-Prometheus `inference_latency_ms`, table `prediction_events`) ne couvrent
-que l'inférence elle-même ; ce script mesure aussi la validation Pydantic et
-l'écriture Postgres pour situer l'inférence dans le total.
+L'étape « optimisation d'inférence » du cahier des charges demande de
+partir des données de monitoring réelles pour identifier les goulots
+d'étranglement avant de tester une optimisation. Les métriques déjà en prod
+(histogramme Prometheus `inference_latency_ms`, table `prediction_events`)
+ne couvrent que l'inférence elle-même ; ce script mesure aussi la
+validation Pydantic et l'écriture Postgres pour situer l'inférence dans le
+total.
 
 ATTENTION : ce script écrit de vraies lignes dans `prediction_events` sur la
 base pointée par DATABASE_URL. À lancer contre le Postgres local
