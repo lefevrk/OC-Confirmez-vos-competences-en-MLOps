@@ -27,6 +27,8 @@ theme:
 plugins:
   - search
   - glightbox
+  - panzoom:
+      full_screen: true
 
 nav:
   - Accueil: index.md
