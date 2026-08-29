@@ -32,7 +32,7 @@ class MlflowScoringModel:
     float/string types), a shape MLflow's built-in ONNX pyfunc wrapper does
     not marshal correctly from a DataFrame or dict — reproduced against the
     real model as `INVALID_ARGUMENT: Unexpected input data type`. See
-    references/OPTIMISATION_ONNX.md for the full trade-off.
+    docs/operations/optimisation-inference.md for the full trade-off.
     """
 
     session: ort.InferenceSession

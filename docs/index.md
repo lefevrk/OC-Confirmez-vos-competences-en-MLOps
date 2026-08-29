@@ -7,17 +7,16 @@
 **Périmètre et limites** :
 
 - Le score renvoyé est une aide à la décision, pas une décision d'octroi automatique au sens réglementaire — voir [Contrat métier](design/model.md#contrat-metier).
-- L'optimisation des performances d'inférence (profilage, quantification) n'est pas encore réalisée à ce stade du projet.
-- Aucune revue humaine n'est intégrée au flux applicatif lui-même — un éventuel circuit d'approbation humaine est externe à ce dépôt.
+- Aucune revue humaine n'est intégrée au flux applicatif lui-même — un éventuel circuit d'approbation humaine est externe à ce dépôt. Son rôle serait de tracer la décision réellement retenue (accord/refus final, éventuellement différent du score brut) pour enrichir le futur jeu d'entraînement sans y réinjecter les biais du modèle en place — éviter que le modèle n'apprenne, à terme, de ses propres décisions.
 
 ## Comment ça fonctionne, en surface
 
-Un client envoie un dossier (50 features) à `POST /predictions`. L'API valide strictement l'entrée, interroge le modèle chargé en mémoire depuis MLflow, compare le score obtenu à un seuil pour trancher accepté/refusé, puis persiste l'événement dans PostgreSQL avant de répondre. En parallèle, chaque requête alimente des métriques et des logs structurés, collectés en continu par un agent unique et visualisés dans Grafana — le détail complet (composants, orchestration CI/CD, flux de données) est dans [Architecture](design/architecture.md).
+Un client envoie un dossier (50 features) à `POST /predictions`. L'API valide strictement l'entrée, interroge le modèle chargé en mémoire (téléchargé au démarrage depuis le serveur MLflow qui héberge le registre de modèles), compare le score obtenu à un seuil pour trancher accepté/refusé, puis persiste l'événement dans PostgreSQL avant de répondre. En parallèle, chaque requête alimente des métriques et des logs structurés, collectés en continu par un agent unique et visualisés dans Grafana — le détail complet (composants, orchestration CI/CD, flux de données) est dans [Architecture](design/architecture.md).
 
 ```mermaid
 flowchart TB
     Client --> API[API de scoring]
-    API --> MLflow[(Modèle — MLflow)]
+    API --> MLflow[(Registre de modèles — serveur MLflow)]
     API --> DB[(Prédictions — Supabase)]
     API --> Monitoring[Monitoring — Grafana Cloud]
 ```
@@ -26,10 +25,13 @@ flowchart TB
 
 ```bash
 uv sync --extra api
+make db-migrate
 make run
 ```
 
-L'API écoute sur `http://localhost:8000` — documentation interactive Swagger sur `/docs`. Détails complets : [Installation & configuration](getting-started/configuration.md).
+Suppose une base PostgreSQL déjà lancée (par exemple `docker compose up -d postgres`) et les variables d'environnement déjà configurées (accès MLflow, Supabase...). `make db-migrate` applique les migrations sur cette base, puis `make run` démarre l'API en local avec uvicorn (`uvicorn api.main:app --reload`) — sans ces deux préalables, l'API démarre mais échoue au premier appel. Détails complets : [Installation & configuration](getting-started/configuration.md).
+
+L'API écoute ensuite sur `http://localhost:8000` — documentation interactive Swagger sur `/docs`.
 
 ## Par thème
 
@@ -55,9 +57,9 @@ L'API écoute sur `http://localhost:8000` — documentation interactive Swagger 
 
 - **Livrer & valider**
 
-    Pipeline CI/CD, environnements et topologie de déploiement VPS, pyramide de tests et qualité de code.
+    Pipeline CI/CD, environnements et topologie de déploiement VPS, pyramide de tests et qualité de code, optimisation des performances d'inférence.
 
-    → [CI/CD & déploiement](operations/deployment.md) · [Tests & qualité](operations/testing.md)
+    → [CI/CD & déploiement](operations/deployment.md) · [Tests & qualité](operations/testing.md) · [Optimisation d'inférence (ONNX)](operations/optimisation-inference.md)
 
 </div>
 
@@ -67,3 +69,4 @@ L'API écoute sur `http://localhost:8000` — documentation interactive Swagger 
 - **API + conteneurisation + CI/CD automatisé** — 5 workflows GitHub Actions couvrant qualité, build, déploiement, drift et documentation (voir [CI/CD & déploiement](operations/deployment.md)).
 - **Monitoring et observabilité** — métriques Prometheus, logs structurés, dashboards Grafana Cloud (voir [Monitoring](operations/monitoring.md)).
 - **Détection de drift automatisée** — pipeline Evidently hebdomadaire, sans intervention manuelle (voir [Analyse du drift](operations/drift-analysis.md)).
+- **Optimisation d'inférence mesurée** — profiling, conversion ONNX, gain ~19-21× confirmé en production sans régression (voir [Optimisation d'inférence (ONNX)](operations/optimisation-inference.md)).
