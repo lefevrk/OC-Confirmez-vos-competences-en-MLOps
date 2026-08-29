@@ -57,9 +57,9 @@ L'API écoute ensuite sur `http://localhost:8000` — documentation interactive 
 
 - **Livrer & valider**
 
-    Pipeline CI/CD, environnements et topologie de déploiement VPS, pyramide de tests et qualité de code.
+    Pipeline CI/CD, environnements et topologie de déploiement VPS, pyramide de tests et qualité de code, optimisation des performances d'inférence.
 
-    → [CI/CD & déploiement](operations/deployment.md) · [Tests & qualité](operations/testing.md)
+    → [CI/CD & déploiement](operations/deployment.md) · [Tests & qualité](operations/testing.md) · [Optimisation d'inférence (ONNX)](operations/optimisation-inference.md)
 
 </div>
 
@@ -69,3 +69,4 @@ L'API écoute ensuite sur `http://localhost:8000` — documentation interactive 
 - **API + conteneurisation + CI/CD automatisé** — 5 workflows GitHub Actions couvrant qualité, build, déploiement, drift et documentation (voir [CI/CD & déploiement](operations/deployment.md)).
 - **Monitoring et observabilité** — métriques Prometheus, logs structurés, dashboards Grafana Cloud (voir [Monitoring](operations/monitoring.md)).
 - **Détection de drift automatisée** — pipeline Evidently hebdomadaire, sans intervention manuelle (voir [Analyse du drift](operations/drift-analysis.md)).
+- **Optimisation d'inférence mesurée** — profiling, conversion ONNX, gain ~19-21× confirmé en production sans régression (voir [Optimisation d'inférence (ONNX)](operations/optimisation-inference.md)).
