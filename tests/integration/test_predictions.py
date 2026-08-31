@@ -110,15 +110,15 @@ def test_prediction_is_unavailable_when_startup_postgres_connection_fails(monkey
     assert response.json() == {"detail": "storage unavailable"}
 
 
-def test_prediction_returns_a_generic_500_when_persistence_fails(monkeypatch) -> None:
+def test_prediction_returns_a_503_when_persistence_fails(monkeypatch) -> None:
     """A recorder available at startup can still fail mid-request; that must not be silent."""
     monkeypatch.setattr(
         "api.bootstrap.connect_prediction_recorder", lambda _settings: FailingRecorder()
     )
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.post("/predictions", json=valid_payload())
-    assert response.status_code == 500
-    assert response.json() == {"detail": "internal server error"}
+    assert response.status_code == 503
+    assert response.json() == {"detail": "prediction succeeded but could not be recorded"}
 
 
 def test_prediction_succeeds_with_a_valid_payload() -> None:

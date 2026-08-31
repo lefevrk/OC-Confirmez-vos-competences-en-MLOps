@@ -6,7 +6,7 @@ from loguru import logger
 import pytest
 
 from api.modules.scoring.domain.entities import PredictionEvent
-from api.modules.scoring.domain.errors import InvalidProbabilityError
+from api.modules.scoring.domain.errors import InvalidProbabilityError, PredictionPersistenceError
 from api.modules.scoring.services.predict import predict
 
 
@@ -97,9 +97,9 @@ def test_predict_records_the_completed_prediction() -> None:
     assert recorded_features == features
 
 
-def test_predict_propagates_a_recorder_failure_on_success() -> None:
+def test_predict_wraps_a_recorder_failure_on_success_in_a_domain_error() -> None:
     """A storage failure on the success path is a hard failure, never a dropped event."""
-    with pytest.raises(RuntimeError, match="storage unavailable"):
+    with pytest.raises(PredictionPersistenceError):
         predict(FakeModel(probability=0.8), FakeRecorder(fails=True), {"feature": 1.0})
 
 
