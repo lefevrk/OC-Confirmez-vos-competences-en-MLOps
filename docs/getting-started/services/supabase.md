@@ -38,7 +38,7 @@ DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-<region>.pooler.
 
 Une politique de purge automatique tourne quotidiennement sur chaque environnement — durée de rétention volontairement différente : courte en `release` (environnement de test), longue en `production` (utile pour le drift et l'audit — voir [Sécurité](../../design/security.md#retention-et-minimisation-des-donnees)).
 
-Activer l'extension `pg_crong` dans **Database → Extensions** :
+Activer l'extension `pg_cron` dans **Database → Extensions** :
 
 ![Activation de l'extension pg_cron](../../assets/screenshots/supabase-enable-pg-cron.jpg)
 
