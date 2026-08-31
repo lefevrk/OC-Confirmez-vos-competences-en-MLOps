@@ -9,14 +9,14 @@
   <p align="center">
     Déploiement d'un modèle de scoring crédit pour "Prêt à Dépenser" : une API FastAPI, PostgreSQL/Supabase, une démo Gradio, un monitoring Grafana/Prometheus et un pipeline CI/CD complet.
     <br />
-    <a href="https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/"><strong>Explore the docs »</strong></a>
+    <a href="https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/"><strong>Explorer la doc »</strong></a>
     <br />
     <br />
-    <a href="https://credit-scoring.lefevrek.fr/">View Demo</a>
+    <a href="https://credit-scoring.lefevrek.fr/">Voir la démo</a>
     &middot;
-    <a href="https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/issues/new?labels=bug&template=bug_report.md">Report Bug</a>
+    <a href="https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/issues/new?labels=bug&template=bug_report.md">Signaler un bug</a>
     &middot;
-    <a href="https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/issues/new?labels=enhancement&template=feature_request.md">Request Feature</a>
+    <a href="https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/issues/new?labels=enhancement&template=feature_request.md">Proposer une fonctionnalité</a>
   </p>
 
   [![CI/CD](https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/lefevrk/OC-Confirmez-vos-competences-en-MLOps/actions/workflows/ci-cd.yml)
@@ -25,26 +25,25 @@
 
 <!-- TABLE OF CONTENTS -->
 <details>
-  <summary>Table of Contents</summary>
+  <summary>Sommaire</summary>
   <ol>
-    <li><a href="#about-the-project">About The Project</a></li>
+    <li><a href="#à-propos-du-projet">À propos du projet</a></li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#démarrage">Démarrage</a>
       <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#docker-installation">Docker Installation</a></li>
-        <li><a href="#installation-without-docker">Installation (without Docker)</a></li>
+        <li><a href="#prérequis">Prérequis</a></li>
+        <li><a href="#installation-docker">Installation Docker</a></li>
+        <li><a href="#installation-sans-docker">Installation (sans Docker)</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#key-results">Key Results</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#utilisation">Utilisation</a></li>
+    <li><a href="#résultats-clés">Résultats clés</a></li>
+    <li><a href="#remerciements">Remerciements</a></li>
   </ol>
 </details>
 
 <!-- ABOUT THE PROJECT -->
-## About The Project
+## À propos du projet
 
 Ce dépôt déploie en production un modèle de scoring crédit pour **"Prêt à Dépenser"** : une API qui prend en entrée le dossier d'un client (50 features) et retourne un score de risque et une recommandation de décision (accepté/refusé). Le modèle lui-même (feature engineering, entraînement, registre MLflow) vit dans un dépôt séparé — celui-ci est le dépôt de **déploiement**.
 
@@ -56,11 +55,11 @@ flowchart TB
     API --> Monitoring[Monitoring — Grafana Cloud]
 ```
 
-### Context
+### Contexte
 
 Un modèle de scoring qui dérive silencieusement sur des données réelles peut continuer à répondre sans jamais signaler qu'il devient moins pertinent. Ce projet répond à ce besoin avec un service d'inférence conteneurisé, une persistance systématique de chaque prédiction, une observabilité complète et une détection automatique de dérive des données.
 
-### What it does
+### Fonctionnalités
 
 - **Sert des prédictions** via une API FastAPI avec documentation OpenAPI/Swagger complète (résumés, codes d'erreur, exemples)
 - **Valide strictement chaque entrée** via des schémas Pydantic à 50 champs, bornes auditées contre le jeu d'entraînement
@@ -70,7 +69,7 @@ Un modèle de scoring qui dérive silencieusement sur des données réelles peut
 - **Automatise tout le cycle de vie** via 5 workflows GitHub Actions (qualité, build, déploiement, drift, documentation)
 - **Expose une démo Gradio** pour tester le modèle sans écrire de code
 
-### Built With
+### Technologies utilisées
 
 <ul>
   <li><img src="https://go-skill-icons.vercel.app/api/icons?i=python" width="20" height="20" valign="middle" /> <strong>Python 3.12</strong> — langage principal</li>
@@ -85,19 +84,19 @@ Un modèle de scoring qui dérive silencieusement sur des données réelles peut
   <li><img src="https://go-skill-icons.vercel.app/api/icons?i=githubactions" width="20" height="20" valign="middle" /> <strong>GitHub Actions</strong> — CI/CD</li>
 </ul>
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<p align="right">(<a href="#readme-top">retour en haut</a>)</p>
 
 <!-- GETTING STARTED -->
-## Getting Started
+## Démarrage
 
-### Prerequisites
+### Prérequis
 
 - [Docker](https://www.docker.com/) et Docker Compose — façon recommandée de lancer le projet
 - Un accès à un serveur MLflow (registre de modèles, hors périmètre de ce dépôt)
 - [Python 3.12+](https://www.python.org/downloads/) et [uv](https://docs.astral.sh/uv/getting-started/installation/) — uniquement pour un lancement sans Docker
 - Une base PostgreSQL accessible et migrée — uniquement pour un lancement sans Docker (`make docker-run` la fournit)
 
-### Docker Installation
+### Installation Docker
 
 Façon recommandée de lancer le projet : démarre l'API, PostgreSQL et toute la stack de monitoring locale (Prometheus, Loki, Alloy, Grafana) en une commande.
 
@@ -116,7 +115,7 @@ Façon recommandée de lancer le projet : démarre l'API, PostgreSQL et toute la
 
 L'API écoute sur `http://localhost:8000` — Swagger sur `/docs`, démo Gradio sur `/`, Grafana local sur `http://localhost:3000`.
 
-### Installation (without Docker)
+### Installation (sans Docker)
 
 Suppose une base PostgreSQL déjà lancée et migrée (`docker compose up -d postgres && make db-migrate`, ou une instance existante) et les variables d'environnement déjà configurées.
 
@@ -128,10 +127,10 @@ make run
 
 L'API écoute sur `http://localhost:8000`, sans la stack de monitoring locale.
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<p align="right">(<a href="#readme-top">retour en haut</a>)</p>
 
 <!-- USAGE EXAMPLES -->
-## Usage
+## Utilisation
 
 Documentation interactive complète (schémas exacts, essai en direct) sur `GET /docs`. Aucune authentification n'est requise sur `/predictions` — voir [Sécurité](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/design/security/) pour ce choix assumé.
 
@@ -151,17 +150,17 @@ Les 50 champs attendus (types, bornes, valeurs optionnelles) : [Scoring](https:/
 curl http://localhost:8000/ready
 ```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<p align="right">(<a href="#readme-top">retour en haut</a>)</p>
 
-## Key Results
+## Résultats clés
 
 - ROC-AUC 0.78, recall 0.65 sur le jeu de test — détail dans [Modèle de scoring](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/design/model/).
 - 88 tests, 100 % de couverture, pipeline CI/CD entièrement automatisé (5 workflows GitHub Actions) — détail dans [Tests & qualité](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/operations/testing/).
 - Détection de drift automatisée (Evidently AI), sans intervention manuelle.
 
 <!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
+## Remerciements
 
 Projet réalisé par **Kilian LEFEVRE** dans le cadre du parcours OpenClassrooms AI Engineer — Projet 8 : *Confirmez vos compétences en MLOps* (Partie 2/2).
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<p align="right">(<a href="#readme-top">retour en haut</a>)</p>
