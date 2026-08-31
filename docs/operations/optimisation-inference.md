@@ -66,17 +66,19 @@ Même protocole de profiling, 200 appels, avant tout changement vs. état actuel
 
 L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant, malgré son propre gain. C'est un **second goulot, indépendant du modèle**, hors scope de la conversion ONNX (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé).
 
-### Piste identifiée pour `persistence`, non implémentée
+## Pistes non retenues
 
-Le coût dominant (`session.commit()`, ~400 appels `psycopg2.cursor.execute` pour 200 prédictions dans le profil) est un aller-retour réseau + commit synchrone **par ligne**, payé en plein par le client puisque `create_prediction` (`router.py`) attend `recorder.record()` avant de répondre.
+### Retrait de `pool_pre_ping` sur l'engine Postgres, non implémenté
 
-Le levier le plus direct serait de sortir cet appel du chemin critique avec `fastapi.BackgroundTasks` : la tâche s'exécute après l'envoi de la réponse, donc le client ne paie plus ce coût dans sa latence perçue — sans changer le débit ni la charge réelle sur Postgres.
+`PostgresPredictionRecorder` (`src/api/infra/postgres/tracking.py`) crée son engine SQLAlchemy avec `pool_pre_ping=True`, qui force un `SELECT 1` de test à chaque fois qu'une connexion est prise dans le pool — soit un aller-retour réseau complet avant même d'écrire quoi que ce soit. Le retirer économiserait cet aller-retour sur chaque prédiction, sans changer le débit ni la charge réelle sur Postgres.
+
+**Non retenu** : `pool_pre_ping` est le filet de sécurité qui remplace, avant chaque requête, une connexion pool devenue périmée côté serveur (timeout d'inactivité du pooler Postgres, ex. Supabase/PgBouncer) par une connexion fraîche, avant que la requête ne s'exécute dessus. Sans lui, une connexion périmée ne se révèle qu'à l'échec de l'`INSERT`.
+
+### `BackgroundTasks` pour sortir la persistance du chemin critique, non implémentée
+
+Le coût de `persistence` reste un aller-retour réseau + commit synchrone par ligne, toujours payé en plein par le client. Le levier le plus direct serait de sortir cet appel du chemin critique avec `fastapi.BackgroundTasks` : la tâche s'exécute après l'envoi de la réponse, donc le client ne paie plus ce coût dans sa latence perçue — sans changer le débit ni la charge réelle sur Postgres.
 
 **Non retenu pour l'instant** : ça affaiblit la garantie associée à une réponse `200` — elle ne signifierait plus « la prédiction est déjà persistée », seulement « le modèle a scoré ». En cas de crash du process entre l'envoi de la réponse et l'exécution de la tâche en arrière-plan, l'événement serait silencieusement perdu, ce qui va à l'encontre du point de vigilance de l'Étape 4 (« assurez-vous que les optimisations n'introduisent pas de régressions ») — ici, une régression de durabilité plutôt que de précision du modèle, mais une régression tout de même. À reconsidérer seulement si une garantie de rattrapage est ajoutée en parallèle (ex. file d'attente durable, retry avec dead-letter) — hors scope de ce travail d'optimisation modèle.
-
-![Visualisation snakeviz du profil ONNX — persistence (Postgres) occupe tout le graphe, l'inférence a disparu](../assets/model/snakeviz_challenger_onnx.png)
-
-*`uv run snakeviz reports/profiling/challenger-onnx_predict.prof`, même vue, 3 niveaux. Contraste direct avec la capture précédente : `tracking.py:46(record)` (0.406 s) occupe maintenant la totalité du graphe visible — `mlflow_model.py:27(probability)` n'apparaît même plus dans les trois premiers niveaux, sa part étant devenue trop petite pour être visuellement distincte de `record()`. La table de stats en bas de page snakeviz confirme le chiffre : `onnxruntime_inference_collection.py:308(run)` ne cumule que 0.030 s sur les 200 appels, contre 0.379 s pour le seul `session.py:1999(commit)` Postgres.*
 
 ## Confirmation en production
 
