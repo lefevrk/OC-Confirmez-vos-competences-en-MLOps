@@ -20,15 +20,13 @@ Le détail fonction par fonction (`cProfile`, voir le `.prof` du même run) mont
 
 *`uv run snakeviz reports/profiling/baseline-sklearn_predict.prof`, vue icicle limitée à 3 niveaux. `predict()` (1.96 s cumulées sur 200 appels) se scinde presque à parts égales entre `mlflow_model.py:27(probability)` (1.24 s) et `tracking.py:46(record)` (0.683 s) — visuellement, la moitié gauche confirme le tableau ci-dessus. Un niveau plus bas, `probability` passe déjà par `pipeline.py:882(predict_proba)` (1.03 s) : la quasi-totalité du temps d'inférence est déjà dans la pipeline sklearn avant même d'atteindre le modèle LightGBM lui-même.*
 
-## Stratégie retenue
+## Inference : stratégie retenue
 
 Conversion du pipeline (preprocessing + LightGBM) en un graphe ONNX unique dans le dépôt d'entraînement, ce qui élimine précisément ce dispatch Python/joblib par appel. Côté serving, `src/api/infra/mlflow_model.py` charge ce graphe **directement via `onnxruntime`** plutôt que par `mlflow.pyfunc.load_model` générique — le wrapper `pyfunc` intégré de `mlflow.onnx` ne marshalle pas correctement un graphe à 50 entrées nommées séparément et de types mixtes (float/string), reproduit et documenté lors de l'implémentation.
 
 Compromis assumé : `mlflow_model.py` n'est plus totalement agnostique du format de modèle (il sait qu'il charge un graphe ONNX). La résolution par alias MLflow, le téléchargement et la validation du `threshold.json` restent inchangés — seul le format du fichier modèle chargé a changé. C'est justement ce qui rend la promotion (`challenger` → `champion`) transparente pour ce dépôt : aucun changement de code n'a été nécessaire, seul l'alias MLflow a été redirigé côté dépôt d'entraînement.
 
-## Validation de non-régression
-
-Comparaison entre l'ancien champion (v4, sklearn — alias `sklearn-champion` depuis la promotion) et le candidat ONNX (v5, alias `champion` depuis la promotion) sur le même jeu de test, au même seuil de décision (0.53), faite dans le dépôt d'entraînement :
+Validation de non-régression — comparaison entre l'ancien champion (v4, sklearn — alias `sklearn-champion` depuis la promotion) et le candidat ONNX (v5, alias `champion` depuis la promotion) sur le même jeu de test, au même seuil de décision (0.53), faite dans le dépôt d'entraînement :
 
 | Métrique | `sklearn-champion` (v4) | `champion` (v5, ONNX) | Écart |
 |---|:---:|:---:|:---:|
@@ -97,7 +95,7 @@ Les deux comparaisons ci-dessus viennent d'un profiling local (`scripts/profilin
 
 Les deux captures viennent de la même fenêtre de dashboard (30 dernières minutes), à un trafic comparable (9.56 vs 10.4 req/s) — le gain d'inférence (~19-21×) confirme en conditions réelles ce que montrait déjà le profiling local, et explique une bonne partie du gain sur la latence HTTP totale (le reste venant de `persistence`, le goulot désormais dominant identifié plus haut).
 
-**Point à surveiller, non expliqué par ce travail** : le CPU des conteneurs applicatifs passe de 37 % à 87 % entre les deux captures. `onnxruntime` crée sa session sans réglage explicite de threads (voir [Stratégie retenue](#strategie-retenue) et `src/api/infra/mlflow_model.py`) — probablement plus de threads utilisés en parallèle pour aller plus vite, donc plus de CPU consommé pour une latence par requête plus basse. Pas un problème en soi (CPU encore loin de la saturation), mais à garder en tête avant d'augmenter significativement le trafic sans revisiter la configuration de threading `onnxruntime`.
+**Point à surveiller, non expliqué par ce travail** : le CPU des conteneurs applicatifs passe de 37 % à 87 % entre les deux captures. `onnxruntime` crée sa session sans réglage explicite de threads (voir [Inference : stratégie retenue](#inference-strategie-retenue) et `src/api/infra/mlflow_model.py`) — probablement plus de threads utilisés en parallèle pour aller plus vite, donc plus de CPU consommé pour une latence par requête plus basse. Pas un problème en soi (CPU encore loin de la saturation), mais à garder en tête avant d'augmenter significativement le trafic sans revisiter la configuration de threading `onnxruntime`.
 
 ## Reproduire
 
