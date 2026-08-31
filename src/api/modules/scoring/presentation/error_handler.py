@@ -3,7 +3,11 @@
 from fastapi import status
 
 from api.common.error_handling import BaseModuleErrorHandler
-from api.modules.scoring.domain.errors import InvalidProbabilityError, ScoringError
+from api.modules.scoring.domain.errors import (
+    InvalidProbabilityError,
+    PredictionPersistenceError,
+    ScoringError,
+)
 
 
 class ScoringErrorHandler(BaseModuleErrorHandler):
@@ -12,4 +16,8 @@ class ScoringErrorHandler(BaseModuleErrorHandler):
     base_exception = ScoringError
     status_map = {
         InvalidProbabilityError: (status.HTTP_500_INTERNAL_SERVER_ERROR, "prediction failed"),
+        PredictionPersistenceError: (
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "prediction succeeded but could not be recorded",
+        ),
     }
