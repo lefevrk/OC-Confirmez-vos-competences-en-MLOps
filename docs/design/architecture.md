@@ -36,8 +36,11 @@ src/api/
     │       ├── router.py            # POST /predictions
     │       ├── schemas.py           # PredictionRequest/Response (Pydantic)
     │       └── error_handler.py     # ScoringError -> code HTTP
-    ├── health/presentation/         # /health, /ready, /metrics — pas de domaine propre
-    └── monitoring/presentation/     # /evidently — sert le rapport de drift généré en CI
+    ├── health/                      # /health, /ready, /metrics — pas de domaine propre
+    │   ├── router.py
+    │   └── schemas.py
+    └── monitoring/                  # /evidently — sert le rapport de drift généré en CI
+        └── router.py
 
 src/ui/                              # démo Gradio — package séparé, pas sous api/modules/
 ├── blocks.py                        # formulaire + appelle POST /predictions en HTTP
@@ -54,7 +57,7 @@ src/ui/                              # démo Gradio — package séparé, pas so
 - **`services/predict.py`** est le use case : il prend un `ScoringModel`, un `PredictionRecorder` et un dict de features, applique le seuil de décision, et renvoie une `Prediction`. Il n'importe ni FastAPI, ni MLflow, ni SQLAlchemy — testable avec de simples doubles de test (voir `tests/unit/scoring/test_services.py`).
 - **`presentation/router.py`** est la seule couche qui parle HTTP : elle valide l'entrée (`PredictionRequest`), résout le modèle et le recorder déjà chargés au démarrage, appelle `predict()`, et traduit le résultat en réponse HTTP.
 
-`health` et `monitoring` n'ont qu'une `presentation/` : ce sont des adaptateurs purs, sans logique métier à eux. `health` expose l'état du process et les métriques Prometheus ; `monitoring` sert un fichier HTML généré ailleurs (voir [Analyse du drift](../operations/drift-analysis.md)). `src/ui/` (la démo Gradio) n'est même pas un module de l'API : c'est un package séparé qui construit une UI et appelle `POST /predictions` en HTTP, exactement comme n'importe quel autre client — l'API reste la seule frontière de validation, la logique de `scoring` n'est jamais dupliquée côté UI (voir [Démo Gradio](../operations/demo.md)).
+`health` et `monitoring` n'ont pas de couche `presentation/` séparée : ce sont des adaptateurs purs, sans logique métier à eux. `health` expose l'état du process et les métriques Prometheus ; `monitoring` sert un fichier HTML généré ailleurs (voir [Analyse du drift](../operations/drift-analysis.md)). `src/ui/` (la démo Gradio) n'est même pas un module de l'API : c'est un package séparé qui construit une UI et appelle `POST /predictions` en HTTP, exactement comme n'importe quel autre client — l'API reste la seule frontière de validation, la logique de `scoring` n'est jamais dupliquée côté UI (voir [Démo Gradio](../operations/demo.md)).
 
 ## Diagramme de classes
 

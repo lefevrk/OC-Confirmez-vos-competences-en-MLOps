@@ -29,7 +29,7 @@ make db-migrate
 make run
 ```
 
-Suppose une base PostgreSQL déjà lancée (par exemple `docker compose up -d postgres`) et les variables d'environnement déjà configurées (accès MLflow, Supabase...). `make db-migrate` applique les migrations sur cette base, puis `make run` démarre l'API en local avec uvicorn (`uvicorn api.main:app --reload`) — sans ces deux préalables, l'API démarre mais échoue au premier appel. Détails complets : [Installation & configuration](getting-started/configuration.md).
+Suppose une base PostgreSQL déjà lancée (par exemple `docker compose up -d postgres`) et les variables d'environnement déjà configurées (accès MLflow, Supabase...). `make db-migrate` applique les migrations sur cette base, puis `make run` démarre l'API en local avec uvicorn (`uvicorn api.app:app --reload`) — sans ces deux préalables, l'API démarre mais échoue au premier appel. Détails complets : [Installation & configuration](getting-started/configuration.md).
 
 L'API écoute ensuite sur `http://localhost:8000` — documentation interactive Swagger sur `/docs`.
 

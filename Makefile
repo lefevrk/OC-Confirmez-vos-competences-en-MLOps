@@ -16,7 +16,7 @@ requirements:
 ## Run the API locally with autoreload
 .PHONY: run
 run:
-	uv run uvicorn api.main:app --reload
+	uv run uvicorn api.app:app --reload
 
 ## Build the API Docker image
 .PHONY: docker-build
