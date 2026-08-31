@@ -96,13 +96,14 @@ Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les 
 
 ## Référence complète des commandes (`Makefile`)
 
-Tout ce qui précède se résume à quelques commandes `make` — la liste complète ci-dessous, regroupée par usage (général, analyse de drift, documentation). Les 20 commandes disponibles (`make help` régénère cette liste à partir des commentaires du `Makefile`, toujours à jour) :
+Tout ce qui précède se résume à quelques commandes `make` — la liste complète ci-dessous, regroupée par usage (général, analyse de drift, documentation). Les 21 commandes disponibles (`make help` régénère cette liste à partir des commentaires du `Makefile`, toujours à jour) :
 
 **Général**
 
 | Commande | Effet |
 |---|---|
 | `make requirements` | Installe les dépendances Python (API + dev) |
+| `make all-requirements` | Installe tous les groupes et extras (API + dev + drift + docs) — tout ce qu'il faut pour la suite de tests complète |
 | `make run` | Démarre l'API en local avec autoreload |
 | `make docker-build` | Build l'image Docker de l'API |
 | `make docker-run` | Build, migre, puis démarre la stack Docker complète |
