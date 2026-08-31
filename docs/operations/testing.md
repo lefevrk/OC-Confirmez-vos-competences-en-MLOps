@@ -22,8 +22,6 @@ flowchart TB
 - **Intégration** : `tests/integration/conftest.py` démarre un conteneur PostgreSQL réel (`testcontainers`), le migre avec Alembic, et l'expose via `DATABASE_URL` — les tests qui touchent au stockage tournent contre une vraie base, jamais un mock.
 - **Fonctionnels** : exécutés uniquement par le pipeline de déploiement, contre l'environnement `release` réellement déployé, avant que `production` ne reçoive la même image.
 
-Pas de suite E2E navigateur (type Playwright) : l'UI (`/`, démo Gradio) est un formulaire simple, déjà couvert côté HTTP par les tests d'intégration (`tests/integration/test_demo.py`) — un navigateur piloté n'apporterait pas de couverture supplémentaire proportionnée à son coût de maintenance ici.
-
 ## Détail par fichier
 
 88 fonctions de test réparties sur 16 fichiers (régénéré via `grep -c '^    def test_\|^def test_' <fichier>`) — `pytest` en collecte 102 au total, certaines de ces fonctions étant paramétrées en plusieurs cas :
