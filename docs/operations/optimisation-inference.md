@@ -43,19 +43,20 @@ Comparaison entre l'ancien champion (v4, sklearn — alias `sklearn-champion` de
 
 ## Résultat mesuré
 
-Même protocole de profiling, 200 appels, rejoué contre le modèle ONNX (alors `challenger`, aujourd'hui `champion`) :
+Même protocole de profiling, 200 appels, avant tout changement vs. état actuellement déployé :
 
-![Latence par étage avant/après optimisation ONNX](../assets/model/onnx_inference_latency_comparison.png)
+![Latence par étage avant/après optimisation](../assets/model/onnx_inference_latency_comparison.png)
 
-*Généré par `make plot-profile-comparison` à partir de deux runs `scripts/profiling/profile_predict.py` (`reports/profiling/baseline-sklearn_stats.json` et `challenger-onnx_stats.json`, non commités).*
+*Généré par `make plot-profile-comparison` à partir de deux runs `scripts/profiling/profile_predict.py` (`reports/profiling/baseline-sklearn_stats.json` et `baseline-preping_stats.json`, non commités) — respectivement `sklearn-champion` (v4) avant tout changement, et `champion` (v5, ONNX).*
 
-| Étage | `sklearn-champion` (v4) | `champion` (v5, ONNX) | Gain |
+| Étage | Avant (sklearn) | Après (ONNX) | Gain |
 |---|:---:|:---:|:---:|
-| `inference` | 2.251 ms | 0.107–0.266 ms selon le run | **~8 à 20×** plus rapide |
-| `persistence` | 1.999 ms | 1.810–3.291 ms | inchangé (bruit Postgres normal, indépendant du modèle) |
-| **Goulot dominant** | `inference` (53 %) | `persistence` (92–94 %) | le modèle n'est plus le facteur limitant |
+| `inference` | 2.251 ms | 0.088–0.266 ms selon le run | **~8.5 à 25×** plus rapide (conversion ONNX) |
+| `persistence` | 1.999 ms | 1.519 ms | **~1.3×** plus rapide — probablement de la variance entre runs distincts plutôt qu'un vrai gain (`persistence` dépend de Postgres, pas du format du modèle) |
+| `end_to_end` | 4.045 ms | 1.529 ms | **~2.6×** plus rapide |
+| **Goulot dominant** | `inference` (53 %) | `persistence` (92 %) | le modèle n'est plus le facteur limitant |
 
-L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant. C'est un **second goulot, indépendant du modèle**, hors scope de cette optimisation (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé).
+L'inférence n'est plus un facteur significatif de la latence de `/predictions` — la persistance PostgreSQL devient de très loin le poste dominant, malgré son propre gain. C'est un **second goulot, indépendant du modèle**, hors scope de la conversion ONNX (voir [Monitoring & métriques](monitoring.md) pour comment il est surveillé).
 
 ### Piste identifiée pour `persistence`, non implémentée
 
@@ -104,12 +105,22 @@ Les deux captures viennent de la même fenêtre de dashboard (30 dernières minu
 docker compose up -d postgres
 make db-migrate
 
-# Ancien champion (sklearn, alias `sklearn-champion` depuis la promotion) :
+# Avant tout changement (sklearn, alias `sklearn-champion` depuis la promotion,
+# et pool_pre_ping=True dans src/api/infra/postgres/tracking.py). Ce run n'est plus
+# rejouable tel quel : mlflow_model.py ne sait plus charger qu'un graphe ONNX
+# (voir Inference : stratégie retenue) — reports/profiling/baseline-sklearn_stats.json date
+# d'avant ce refactor et est conservé tel quel comme référence historique.
 MODEL_ALIAS=sklearn-champion SAMPLES=200 LABEL=baseline-sklearn make profile-predict
-# Modèle optimisé (ONNX, alias `champion` depuis la promotion — celui de .env par défaut) :
+# État actuellement déployé (ONNX) — utilisé pour le snakeviz "goulot persistence" plus haut :
 SAMPLES=200 LABEL=challenger-onnx make profile-predict
+# Même config, run distinct utilisé pour le graphique combiné ci-dessus :
+SAMPLES=200 LABEL=baseline-preping make profile-predict
 
-make plot-profile-comparison
+# Graphique combiné (avant tout changement vs. état actuellement déployé) :
+BASELINE=baseline-sklearn CHALLENGER=baseline-preping \
+  BASELINE_NAME="Avant optimisation (sklearn, persistence classique)" \
+  CHALLENGER_NAME="Après optimisation (ONNX)" \
+  make plot-profile-comparison
 ```
 
 Détail fonction par fonction d'un run : `uv run snakeviz reports/profiling/<label>_predict.prof`.
