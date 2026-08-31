@@ -66,7 +66,7 @@ Required test coverage of 80% reached. Total coverage: 100.00%
 
 ## Rapport de couverture en CI
 
-La porte de qualité (voir [CI/CD & déploiement](deployment.md#la-porte-de-qualite)) génère aussi un résumé markdown de la couverture (`coverage report --format=markdown`) — même logique que le rapport de drift : publié directement dans le step summary de l'exécution GitHub Actions, **et** joint en artefact téléchargeable, consultable après coup sans reparcourir les logs bruts du terminal.
+Le quality gate (voir [CI/CD & déploiement](deployment.md#le-quality-gate)) génère aussi un résumé markdown de la couverture (`coverage report --format=markdown`) — même logique que le rapport de drift : publié directement dans le step summary de l'exécution GitHub Actions, **et** joint en artefact téléchargeable, consultable après coup sans reparcourir les logs bruts du terminal.
 
 ## Qualité de code
 
@@ -75,4 +75,4 @@ La porte de qualité (voir [CI/CD & déploiement](deployment.md#la-porte-de-qual
 - **Couverture** — seuil minimum 80 % (`fail_under = 80`), la CI casse en dessous.
 - **pre-commit** (`make setup-hooks`) — lint et format avant chaque commit, hooks avant chaque push.
 
-Ces trois contrôles (lint, types, tests) forment la porte de qualité de la CI — voir [CI/CD & déploiement](deployment.md).
+Ces trois contrôles (lint, types, tests) forment le quality gate de la CI — voir [CI/CD & déploiement](deployment.md).

@@ -2,11 +2,11 @@
 
 Livrer une nouvelle version sans y repenser à chaque fois — pas de checklist manuelle, pas de SSH à la main sauf en cas d'incident. GitHub Actions est l'orchestrateur central de tout ce qui n'est pas la vie courante d'une requête HTTP : lint/tests, build de l'image, déploiement, et les jobs périodiques (drift, documentation) — voir [Vue orchestration](../design/architecture.md#vue-orchestration-github-actions) pour la vue d'ensemble. Un seul VPS héberge deux environnements logiques, `release` et `production`.
 
-L'idée simple : chaque push déclenche d'abord une porte de qualité (lint, types, tests) ; s'il atteint `main` ou une branche `release/*`, l'image est construite puis déployée automatiquement sur l'environnement correspondant, avec une vérification post-déploiement adaptée au risque (suite fonctionnelle complète en `release`, contrôle rapide en `production` puisque `release` a déjà validé la même image).
+L'idée simple : chaque push déclenche d'abord un quality gate (lint, types, tests) ; s'il atteint `main` ou une branche `release/*`, l'image est construite puis déployée automatiquement sur l'environnement correspondant, avec une vérification post-déploiement adaptée au risque (suite fonctionnelle complète en `release`, contrôle rapide en `production` puisque `release` a déjà validé la même image).
 
 ```mermaid
 flowchart LR
-    push[push / PR] --> gate[Porte de qualité<br/>lint + types + tests]
+    push[push / PR] --> gate[Quality gate<br/>lint + types + tests]
     gate --> target{main ou release/* ?}
     target -->|main| buildProd[Build image<br/>tag: prod]
     target -->|release/*| buildRelease[Build image<br/>tag: release]
@@ -14,7 +14,7 @@ flowchart LR
     buildRelease --> deployRelease[Déploiement<br/>release — suite fonctionnelle complète]
 ```
 
-`determine-target` (l'étape qui choisit l'environnement) ne s'exécute que sur push/`workflow_dispatch` vers `main` ou `release/**` — jamais sur une simple PR, qui s'arrête après la porte de qualité.
+`determine-target` (l'étape qui choisit l'environnement) ne s'exécute que sur push/`workflow_dispatch` vers `main` ou `release/**` — jamais sur une simple PR, qui s'arrête après le quality gate.
 
 ![Run CI/CD verte](../assets/screenshots/github-actions-run.png)
 
@@ -26,13 +26,13 @@ Le dépôt a exactement 5 workflows :
 
 | Workflow | Fichier | Déclencheur | Rôle |
 |---|---|---|---|
-| Porte de qualité + build + déploiement | `ci-cd.yml` | push/PR sur `develop`/`main`/`release/**` | cette page |
+| Quality gate + build + déploiement | `ci-cd.yml` | push/PR sur `develop`/`main`/`release/**` | cette page |
 | Déploiement | `deploy.yml` | appelé par `ci-cd.yml` | déploiement VPS + vérification post-déploiement |
 | Surveillance drift | `drift-monitoring.yml` | cron hebdomadaire + manuel | déclenche l'analyse de drift |
 | Rapport de drift | `drift-report.yml` | appelé par `drift-monitoring.yml` | génère, publie et archive le rapport de drift ([Analyse du drift](drift-analysis.md)) |
 | Documentation | `docs.yml` | push sur `main` (`docs/**`) + manuel | build + publie ce site sur GitHub Pages |
 
-## La porte de qualité
+## Le quality gate
 
 Sur chaque push et PR vers `develop`, `main` ou `release/**` :
 
@@ -128,6 +128,6 @@ Définis par environnement GitHub (`release`/`production`) :
 | `DATABASE_URL` | secret | Rapport de drift | accès lecture à la base de l'environnement analysé |
 | `HF_BUCKET_ID` / `HF_BUCKET_READ_TOKEN` | secrets | Rapport de drift | téléchargement du jeu de référence drift (voir [Configurer le bucket Hugging Face](../getting-started/services/huggingface-bucket.md)) |
 | `MLFLOW_TRACKING_URI` / `_USERNAME` / `_PASSWORD` | secrets | Documentation | régénération de [Modèle de scoring](../design/model.md) depuis le champion MLflow |
-| `GITHUB_TOKEN` | implicite (fourni par GitHub) | Porte de qualité + build | login `ghcr.io` pour le push d'image |
+| `GITHUB_TOKEN` | implicite (fourni par GitHub) | Quality gate + build | login `ghcr.io` pour le push d'image |
 
 Se créent dans **Settings → Secrets and variables → Actions** du dépôt, sous l'onglet **Environments** pour les valeurs spécifiques à `release`/`production`. `API_TOKEN` (Basic sur `/evidently`) reste une variable locale/VPS — voir [Installation & configuration](../getting-started/configuration.md) — plus un secret GitHub Actions, `/predictions` et `/` n'en ayant plus besoin (voir [Sécurité](../design/security.md#authentification)).
