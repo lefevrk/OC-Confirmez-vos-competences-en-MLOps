@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from loguru import Logger
 
 from api.modules.scoring.domain.entities import Prediction, PredictionEvent
-from api.modules.scoring.domain.errors import InvalidProbabilityError
+from api.modules.scoring.domain.errors import InvalidProbabilityError, PredictionPersistenceError
 from api.modules.scoring.ports.model import ScoringModel
 from api.modules.scoring.ports.prediction_recorder import PredictionRecorder
 
@@ -95,18 +95,24 @@ def predict(
         model_version=model.version,
         inference_latency_ms=inference_latency_ms,
     )
-    recorder.record(
-        PredictionEvent(
-            prediction_id=prediction.prediction_id,
-            model_version=prediction.model_version,
-            status="success",
-            probability=prediction.probability,
-            decision=prediction.decision,
-            inference_latency_ms=prediction.inference_latency_ms,
-            error_code=None,
-        ),
-        features,
-    )
+    try:
+        recorder.record(
+            PredictionEvent(
+                prediction_id=prediction.prediction_id,
+                model_version=prediction.model_version,
+                status="success",
+                probability=prediction.probability,
+                decision=prediction.decision,
+                inference_latency_ms=prediction.inference_latency_ms,
+                error_code=None,
+            ),
+            features,
+        )
+    except Exception as exc:
+        bound.bind(error=str(exc)).error("prediction_event_persistence_failed")
+        raise PredictionPersistenceError(
+            "The prediction succeeded but could not be recorded"
+        ) from exc
     bound.bind(
         probability=prediction.probability,
         decision=prediction.decision,
