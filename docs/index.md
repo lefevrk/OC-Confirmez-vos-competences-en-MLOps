@@ -24,7 +24,7 @@ flowchart TB
 ## Démarrage rapide
 
 ```bash
-uv sync --extra api
+make requirements
 make db-migrate
 make run
 ```

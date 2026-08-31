@@ -95,6 +95,7 @@ Un modèle de scoring qui dérive silencieusement sur des données réelles peut
 - [Docker](https://www.docker.com/) et Docker Compose — façon recommandée de lancer le projet
 - Un accès à un serveur MLflow (registre de modèles, hors périmètre de ce dépôt)
 - [Python 3.12+](https://www.python.org/downloads/) et [uv](https://docs.astral.sh/uv/getting-started/installation/) — uniquement pour un lancement sans Docker
+- Une base PostgreSQL accessible et migrée — uniquement pour un lancement sans Docker (`make docker-run` la fournit)
 
 ### Docker Installation
 
@@ -108,9 +109,8 @@ Façon recommandée de lancer le projet : démarre l'API, PostgreSQL et toute la
    ```
    Détail de chaque variable (MLflow, PostgreSQL...) : [Installation & configuration](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/getting-started/configuration/).
 
-2. Build puis lancer
+2. Lancer (build, migration puis démarrage de la stack complète)
    ```bash
-   make docker-build
    make docker-run
    ```
 
@@ -118,9 +118,11 @@ L'API écoute sur `http://localhost:8000` — Swagger sur `/docs`, démo Gradio 
 
 ### Installation (without Docker)
 
+Suppose une base PostgreSQL déjà lancée et migrée (`docker compose up -d postgres && make db-migrate`, ou une instance existante) et les variables d'environnement déjà configurées.
+
 ```bash
-uv sync --extra api
-make setup-hooks
+make requirements
+make db-migrate
 make run
 ```
 
