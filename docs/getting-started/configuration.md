@@ -8,12 +8,13 @@ Tout ce qu'il faut pour faire tourner l'API en local, avec ou sans la stack de m
 - [Docker](https://docs.docker.com/get-started/get-docker/) et Docker Compose pour la stack locale complète (API + PostgreSQL + monitoring).
 - [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) pour la simulation de trafic drifté (voir [Génération du trafic de drift](../operations/drift-generation.md)) — optionnel, pas requis pour lancer l'API.
 - Un accès à un serveur MLflow (registre de modèles) — le modèle lui-même est entraîné et versionné dans un dépôt séparé.
+- Une base PostgreSQL accessible et migrée — uniquement pour un lancement sans Docker (`make docker-run` la fournit).
 
 ## Installation
 
 ```bash
-uv sync --extra api      # dépendances runtime de l'API
-make setup-hooks         # git hooks (pre-commit, pre-push)
+make requirements    # dépendances runtime de l'API (uv sync --extra api)
+make setup-hooks     # git hooks (pre-commit, pre-push)
 ```
 
 Groupes de dépendances additionnels, installés séparément pour ne pas alourdir l'environnement quotidien :
@@ -29,16 +30,15 @@ Groupes de dépendances additionnels, installés séparément pour ne pas alourd
 === "Docker Compose (stack complète)"
 
     ```bash
-    make docker-build
     make docker-run
     ```
 
-    Démarre l'API, PostgreSQL, et toute la stack de monitoring (Prometheus, Loki, Alloy, Grafana — voir [Monitoring](../operations/monitoring.md)).
+    Build l'image, migre la base, puis démarre l'API, PostgreSQL, et toute la stack de monitoring (Prometheus, Loki, Alloy, Grafana — voir [Monitoring](../operations/monitoring.md)).
 
 === "Local (uvicorn)"
 
     ```bash
-    uv sync --extra api
+    make requirements
     make db-migrate
     make run
     ```
