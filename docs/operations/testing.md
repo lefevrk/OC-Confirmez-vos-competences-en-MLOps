@@ -63,8 +63,8 @@ Sortie réelle (pas une image — reste copiable, ne devient pas obsolète visue
 ```text
 $ uv run pytest --cov=api --cov-report=term-missing --cov-fail-under=80
 ...
-Required test coverage of 80% reached. Total coverage: 100.00%
-102 passed, 10 warnings in 8.31s
+Required test coverage of 80% reached. Total coverage: 99.63%
+102 passed, 10 warnings in 9.39s
 ```
 
 ## Rapport de couverture en CI

@@ -155,7 +155,7 @@ curl http://localhost:8000/ready
 ## Résultats clés
 
 - ROC-AUC 0.78, recall 0.65 sur le jeu de test — détail dans [Modèle de scoring](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/design/model/).
-- 88 tests, 100 % de couverture, pipeline CI/CD entièrement automatisé (5 workflows GitHub Actions) — détail dans [Tests & qualité](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/operations/testing/).
+- 88 tests, 99,6 % de couverture, pipeline CI/CD entièrement automatisé (5 workflows GitHub Actions) — détail dans [Tests & qualité](https://lefevrk.github.io/OC-Confirmez-vos-competences-en-MLOps/operations/testing/).
 - Détection de drift automatisée (Evidently AI), sans intervention manuelle.
 
 <!-- ACKNOWLEDGMENTS -->
