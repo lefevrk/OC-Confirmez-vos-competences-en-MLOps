@@ -96,7 +96,7 @@ Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les 
 
 ## Référence complète des commandes (`Makefile`)
 
-Tout ce qui précède se résume à quelques commandes `make` — la liste complète ci-dessous, regroupée par usage (général, analyse de drift, documentation). Les 21 commandes disponibles (`make help` régénère cette liste à partir des commentaires du `Makefile`, toujours à jour) :
+Tout ce qui précède se résume à quelques commandes `make` — la liste complète ci-dessous, regroupée par usage (général, analyse de drift, profiling, documentation). Les 24 commandes disponibles (`make help` régénère cette liste à partir des commentaires du `Makefile`, toujours à jour) :
 
 **Général**
 
@@ -126,6 +126,13 @@ Tout ce qui précède se résume à quelques commandes `make` — la liste compl
 | `make generate-drift-fixtures` | Génère la fixture k6 à intensité croissante |
 | `make generate-drift-report` | Analyse les prédictions récentes et écrit `reports/drift_report.html`/`drift_summary.md` |
 | `make load-test-drift` | Rejoue la fixture contre `BASE_URL` (~15 min ; `SLEEP_SECONDS=0` pour vitesse max) |
+
+**Profiling** (voir [Optimisation d'inférence (ONNX)](../operations/optimisation-inference.md))
+
+| Commande | Effet |
+|---|---|
+| `make profile-predict` | Profile le chemin de requête réel (écrit `reports/profiling/<label>_*`) |
+| `make plot-profile-comparison` | Génère un graphique de latence avant/après à partir de deux runs `profile-predict` |
 
 **Documentation**
 
