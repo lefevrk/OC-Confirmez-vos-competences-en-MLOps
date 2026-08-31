@@ -39,6 +39,16 @@ Validation de non-régression — comparaison entre l'ancien champion (v4, sklea
 
 Écart de probabilité prédite entre les deux modèles, ligne par ligne sur le jeu de test : écart moyen `7.2e-07`, écart maximal `0.0172` (arrondi de précision flottante lié à la conversion, sans effet sur la décision au seuil 0.53).
 
+## Persistence : goulot secondaire, aucune optimisation retenue
+
+Le tableau du goulot initial (plus haut) montrait déjà `persistence` à 47 % du temps mesuré, aux côtés d'`inference`. Une fois la conversion ONNX en place, `inference` cesse d'être un facteur significatif et `persistence` devient le facteur dominant :
+
+![Visualisation snakeviz du profil ONNX — persistence (Postgres) occupe tout le graphe, l'inférence a disparu](../assets/model/snakeviz_challenger_onnx.png)
+
+*`uv run snakeviz reports/profiling/challenger-onnx_predict.prof`, même vue, 3 niveaux, capturée après la conversion ONNX. Contraste direct avec la capture du goulot initial : `tracking.py:46(record)` (0.406 s) occupe maintenant la totalité du graphe visible — `mlflow_model.py:27(probability)` n'apparaît même plus dans les trois premiers niveaux, sa part étant devenue trop petite pour être visuellement distincte de `record()`. La table de stats en bas de page snakeviz confirme le chiffre : `onnxruntime_inference_collection.py:308(run)` ne cumule que 0.030 s sur les 200 appels, contre 0.379 s pour le seul `session.py:1999(commit)` Postgres.*
+
+Le coût dominant (`session.commit()`, ~400 appels `psycopg2.cursor.execute` pour 200 prédictions dans le profil ci-dessus) est un aller-retour réseau + commit synchrone **par ligne**, payé en plein par le client puisque `create_prediction` (`router.py`) attend `recorder.record()` avant de répondre.
+
 ## Résultat mesuré
 
 Même protocole de profiling, 200 appels, avant tout changement vs. état actuellement déployé :
