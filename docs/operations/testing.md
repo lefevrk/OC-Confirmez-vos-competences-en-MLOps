@@ -47,6 +47,11 @@ flowchart TB
 
 ## Lancer les tests
 
+Prérequis :
+
+- `make all-requirements` (`uv sync --all-groups --all-extras`) — installe tous les groupes et extras d'un coup (API, `dev`, `drift`, `docs`), sans avoir à savoir quel groupe couvre quel test. Nécessaire ici parce que `tests/integration/test_drift_analysis.py` teste `scripts/drift_analysis.py`, qui importe `evidently` — délibérément hors du groupe `dev` par défaut (poids de l'installation, voir `pyproject.toml`). Un simple `make requirements` fait échouer `make test` à la collecte sur ce fichier avec `ModuleNotFoundError: No module named 'evidently'`.
+- Un **daemon Docker actif** : les tests d'intégration démarrent leur propre PostgreSQL éphémère via `testcontainers` (voir `tests/integration/conftest.py`) — aucune base externe ni variable d'environnement à configurer, `DATABASE_URL` est fixée automatiquement sur le conteneur éphémère.
+
 ```bash
 make test                                    # tests/unit + tests/integration
 uv run pytest tests/functional/ -v           # nécessite une API déployée (API_BASE_URL)
