@@ -13,7 +13,7 @@ from mlflow.tracking import MlflowClient
 import numpy as np
 import onnxruntime as ort
 
-from api.infra.config import Settings
+from api.common.config import Settings
 
 
 def _feature_tensor(value: Any, onnx_type: str) -> np.ndarray:

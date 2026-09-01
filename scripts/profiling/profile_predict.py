@@ -40,7 +40,7 @@ from scripts.profiling.bottleneck import (
 )
 import typer
 
-from api.infra.config import get_settings
+from api.common.config import get_settings
 from api.infra.mlflow_model import load_champion
 from api.infra.postgres.tracking import connect_prediction_recorder
 from api.modules.scoring.domain.entities import PredictionEvent

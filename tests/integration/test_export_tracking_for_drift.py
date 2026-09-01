@@ -11,7 +11,7 @@ from scripts.export_tracking_for_drift import export_predictions
 from sqlalchemy import create_engine, delete
 from sqlalchemy.orm import Session
 
-from api.infra.config import get_settings
+from api.common.config import get_settings
 from api.infra.postgres.models import PredictionEventRecord
 
 

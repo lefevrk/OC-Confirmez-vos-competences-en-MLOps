@@ -3,8 +3,8 @@
 from pydantic import ValidationError
 import pytest
 
-import api.infra.config as config_module
-from api.infra.config import Settings, get_settings
+import api.common.config as config_module
+from api.common.config import Settings, get_settings
 
 
 def test_settings_requires_mlflow_credentials(monkeypatch) -> None:

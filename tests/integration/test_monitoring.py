@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from api.app import app
-import api.infra.config as config_module
+import api.common.config as config_module
 
 
 class _Model:

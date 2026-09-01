@@ -1,7 +1,7 @@
 """Generate the Evidently drift report and a markdown summary.
 
 Runs against a given environment's production database. Deliberately does
-not depend on `api.infra.config.Settings` — that model
+not depend on `api.common.config.Settings` — that model
 requires MLflow credentials this job has no use for. `DATABASE_URL` is read
 directly from the environment, matching `download_drift_reference.py`'s
 convention for its own bucket credentials.

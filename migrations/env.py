@@ -2,7 +2,7 @@
 
 from alembic import context
 
-from api.infra.config import get_settings
+from api.common.config import get_settings
 from api.infra.postgres.models import metadata
 
 config = context.config
