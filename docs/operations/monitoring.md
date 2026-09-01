@@ -6,7 +6,7 @@ Un unique agent Grafana Alloy collecte ces métriques et logs et les pousse vers
 
 ## Métriques
 
-`GET /metrics` (`src/api/modules/health/router.py`) expose les métriques au format Prometheus. Elles sont définies dans `src/api/infra/metrics.py` :
+`GET /metrics` (`src/api/modules/health/router.py`) expose les métriques au format Prometheus. Elles sont définies dans `src/api/infra/observability/metrics.py` :
 
 | Métrique | Type | Labels | Rôle |
 |---|---|---|---|
@@ -20,11 +20,11 @@ Un unique agent Grafana Alloy collecte ces métriques et logs et les pousse vers
 | `credit_scoring_mlflow_errors_total` | Counter | — | Échecs de chargement MLflow |
 | `credit_scoring_postgres_errors_total` | Counter | — | Indisponibilité PostgreSQL |
 
-Deux origines distinctes, pas une seule : `ObservabilityMiddleware` (`src/api/infra/observability_middleware.py`) pose les métriques HTTP génériques (les 3 premières lignes) pour **toutes** les routes, par route template (`/predictions`, jamais l'URL brute) pour rester à cardinalité basse — mais elle ne voit qu'une requête et une réponse HTTP, jamais le résultat métier. Les métriques ML (score prédit, décision, latence d'inférence) n'existent qu'une fois `predict()` retourné : elles sont donc posées directement dans `scoring/presentation/router.py`, après chaque prédiction réussie, pas dans le middleware.
+Deux origines distinctes, pas une seule : `ObservabilityMiddleware` (`src/api/infra/observability/middleware.py`) pose les métriques HTTP génériques (les 3 premières lignes) pour **toutes** les routes, par route template (`/predictions`, jamais l'URL brute) pour rester à cardinalité basse — mais elle ne voit qu'une requête et une réponse HTTP, jamais le résultat métier. Les métriques ML (score prédit, décision, latence d'inférence) n'existent qu'une fois `predict()` retourné : elles sont donc posées directement dans `scoring/presentation/router.py`, après chaque prédiction réussie, pas dans le middleware.
 
 ## Logs
 
-`src/api/infra/logging.py` configure Loguru pour émettre une ligne JSON par log — timestamp, niveau, message, champs additionnels liés (`prediction_id`, `input_hash`...), et la trace complète sur `logger.exception(...)`. Exemple réel, la ligne émise à la fin d'une prédiction réussie (`scoring/services/predict.py`) :
+`src/api/infra/observability/logging.py` configure Loguru pour émettre une ligne JSON par log — timestamp, niveau, message, champs additionnels liés (`prediction_id`, `input_hash`...), et la trace complète sur `logger.exception(...)`. Exemple réel, la ligne émise à la fin d'une prédiction réussie (`scoring/services/predict.py`) :
 
 ```json
 {"timestamp": "2026-08-24T10:15:32.481203+00:00", "level": "INFO", "message": "scoring_completed", "prediction_id": "b3c1e2a4-7f1a-4e3d-9c2b-1a2b3c4d5e6f", "input_hash": "a1b2c3d4e5f6", "feature_count": 50, "probability": 0.341, "decision": 0, "model_version": "4", "inference_latency_ms": 1.71}

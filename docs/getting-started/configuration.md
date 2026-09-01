@@ -47,7 +47,7 @@ Groupes de dépendances additionnels, installés séparément pour ne pas alourd
 
 ## Variables d'environnement
 
-Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les scripts de drift, la stack de monitoring locale, ou le VPS de déploiement — jamais les mêmes secrets au même endroit deux fois. Lues via `pydantic-settings` (`src/api/infra/config.py`, fichier `.env` à la racine) pour les variables applicatives, ou directement par les scripts/workflows pour le reste. `.env.example` (local) et `deploy/.env.example` (VPS) documentent chaque valeur.
+Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les scripts de drift, la stack de monitoring locale, ou le VPS de déploiement — jamais les mêmes secrets au même endroit deux fois. Lues via `pydantic-settings` (`src/api/common/config.py`, fichier `.env` à la racine) pour les variables applicatives, ou directement par les scripts/workflows pour le reste. `.env.example` (local) et `deploy/.env.example` (VPS) documentent chaque valeur.
 
 !!! warning "Un `$` dans une valeur casse l'interpolation Docker Compose"
     Docker Compose interpole le `.env` qu'il lit (pour son propre `${VAR}` dans `compose.yml`) — un secret généré aléatoirement qui contient un `$` (un mot de passe, un token) y est donc lu comme le début d'une référence de variable, avec un avertissement `variable is not set` et une valeur tronquée au runtime. Entourer la valeur de guillemets simples suffit à la préserver telle quelle :

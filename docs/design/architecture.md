@@ -10,18 +10,19 @@ Le use case de scoring (`predict()`) ne dépend d'aucun framework — testable a
 src/api/
 ├── app.py                          # assemblage FastAPI (routes, middleware, exception handlers)
 ├── bootstrap.py                    # composition root : charge modèle + connexion DB au démarrage
-├── common/
-│   └── error_handling.py           # base commune pour mapper une erreur domaine -> HTTP
-├── infra/                          # adaptateurs génériques (pas de logique métier)
-│   ├── auth.py                     # vérification Basic (GET /evidently)
+├── common/                          # plomberie applicative partagée — pas de port, pas de frontière externe
+│   ├── auth.py                     # vérification Basic (GET /evidently), simple fonction injectée via Depends()
 │   ├── config.py                   # Settings (pydantic-settings)
-│   ├── logging.py                  # sink JSON structuré (Loguru)
-│   ├── metrics.py                  # métriques Prometheus
-│   ├── mlflow_model.py             # adaptateur MLflow -> ScoringModel
-│   ├── observability_middleware.py # métriques HTTP par requête
+│   └── error_handling.py           # base commune pour mapper une erreur domaine -> HTTP
+├── infra/                          # adaptateurs vers l'extérieur (pas de logique métier)
+│   ├── mlflow_model.py             # adaptateur MLflow -> ScoringModel (port explicite)
+│   ├── observability/              # intégrations vers la stack de monitoring (Prometheus, Loki) — pas de port non plus, mais une vraie frontière sortante
+│   │   ├── logging.py               # sink JSON structuré (Loguru)
+│   │   ├── metrics.py               # métriques Prometheus
+│   │   └── middleware.py            # métriques HTTP par requête
 │   └── postgres/
 │       ├── models.py                # schéma SQLAlchemy
-│       └── tracking.py              # adaptateur PostgreSQL -> PredictionRecorder
+│       └── tracking.py              # adaptateur PostgreSQL -> PredictionRecorder (port explicite)
 └── modules/
     ├── scoring/                    # le seul module avec de la logique métier propre
     │   ├── domain/
