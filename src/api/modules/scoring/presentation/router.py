@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from loguru import logger
 
-from api.infra.metrics import (
+from api.infra.observability.metrics import (
     INFERENCE_LATENCY,
     POSTGRES_ERRORS,
     PREDICTION_DECISIONS,

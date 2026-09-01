@@ -22,8 +22,6 @@ flowchart TB
 - **Intégration** : `tests/integration/conftest.py` démarre un conteneur PostgreSQL réel (`testcontainers`), le migre avec Alembic, et l'expose via `DATABASE_URL` — les tests qui touchent au stockage tournent contre une vraie base, jamais un mock.
 - **Fonctionnels** : exécutés uniquement par le pipeline de déploiement, contre l'environnement `release` réellement déployé, avant que `production` ne reçoive la même image.
 
-Pas de suite E2E navigateur (type Playwright) : l'UI (`/`, démo Gradio) est un formulaire simple, déjà couvert côté HTTP par les tests d'intégration (`tests/integration/test_demo.py`) — un navigateur piloté n'apporterait pas de couverture supplémentaire proportionnée à son coût de maintenance ici.
-
 ## Détail par fichier
 
 88 fonctions de test réparties sur 16 fichiers (régénéré via `grep -c '^    def test_\|^def test_' <fichier>`) — `pytest` en collecte 102 au total, certaines de ces fonctions étant paramétrées en plusieurs cas :
@@ -49,6 +47,11 @@ Pas de suite E2E navigateur (type Playwright) : l'UI (`/`, démo Gradio) est un 
 
 ## Lancer les tests
 
+Prérequis :
+
+- `make all-requirements` (`uv sync --all-groups --all-extras`) — installe tous les groupes et extras d'un coup (API, `dev`, `drift`, `docs`), sans avoir à savoir quel groupe couvre quel test. Nécessaire ici parce que `tests/integration/test_drift_analysis.py` teste `scripts/drift_analysis.py`, qui importe `evidently` — délibérément hors du groupe `dev` par défaut (poids de l'installation, voir `pyproject.toml`). Un simple `make requirements` fait échouer `make test` à la collecte sur ce fichier avec `ModuleNotFoundError: No module named 'evidently'`.
+- Un **daemon Docker actif** : les tests d'intégration démarrent leur propre PostgreSQL éphémère via `testcontainers` (voir `tests/integration/conftest.py`) — aucune base externe ni variable d'environnement à configurer, `DATABASE_URL` est fixée automatiquement sur le conteneur éphémère.
+
 ```bash
 make test                                    # tests/unit + tests/integration
 uv run pytest tests/functional/ -v           # nécessite une API déployée (API_BASE_URL)
@@ -60,13 +63,13 @@ Sortie réelle (pas une image — reste copiable, ne devient pas obsolète visue
 ```text
 $ uv run pytest --cov=api --cov-report=term-missing --cov-fail-under=80
 ...
-Required test coverage of 80% reached. Total coverage: 100.00%
-102 passed, 10 warnings in 8.31s
+Required test coverage of 80% reached. Total coverage: 99.63%
+102 passed, 10 warnings in 9.39s
 ```
 
 ## Rapport de couverture en CI
 
-La porte de qualité (voir [CI/CD & déploiement](deployment.md#la-porte-de-qualite)) génère aussi un résumé markdown de la couverture (`coverage report --format=markdown`) — même logique que le rapport de drift : publié directement dans le step summary de l'exécution GitHub Actions, **et** joint en artefact téléchargeable, consultable après coup sans reparcourir les logs bruts du terminal.
+Le quality gate (voir [CI/CD & déploiement](deployment.md#le-quality-gate)) génère aussi un résumé markdown de la couverture (`coverage report --format=markdown`) — même logique que le rapport de drift : publié directement dans le step summary de l'exécution GitHub Actions, **et** joint en artefact téléchargeable, consultable après coup sans reparcourir les logs bruts du terminal.
 
 ## Qualité de code
 
@@ -75,4 +78,4 @@ La porte de qualité (voir [CI/CD & déploiement](deployment.md#la-porte-de-qual
 - **Couverture** — seuil minimum 80 % (`fail_under = 80`), la CI casse en dessous.
 - **pre-commit** (`make setup-hooks`) — lint et format avant chaque commit, hooks avant chaque push.
 
-Ces trois contrôles (lint, types, tests) forment la porte de qualité de la CI — voir [CI/CD & déploiement](deployment.md).
+Ces trois contrôles (lint, types, tests) forment le quality gate de la CI — voir [CI/CD & déploiement](deployment.md).

@@ -8,12 +8,13 @@ Tout ce qu'il faut pour faire tourner l'API en local, avec ou sans la stack de m
 - [Docker](https://docs.docker.com/get-started/get-docker/) et Docker Compose pour la stack locale complète (API + PostgreSQL + monitoring).
 - [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) pour la simulation de trafic drifté (voir [Génération du trafic de drift](../operations/drift-generation.md)) — optionnel, pas requis pour lancer l'API.
 - Un accès à un serveur MLflow (registre de modèles) — le modèle lui-même est entraîné et versionné dans un dépôt séparé.
+- Une base PostgreSQL accessible et migrée — uniquement pour un lancement sans Docker (`make docker-run` la fournit).
 
 ## Installation
 
 ```bash
-uv sync --extra api      # dépendances runtime de l'API
-make setup-hooks         # git hooks (pre-commit, pre-push)
+make requirements    # dépendances runtime de l'API (uv sync --extra api)
+make setup-hooks     # git hooks (pre-commit, pre-push)
 ```
 
 Groupes de dépendances additionnels, installés séparément pour ne pas alourdir l'environnement quotidien :
@@ -29,16 +30,15 @@ Groupes de dépendances additionnels, installés séparément pour ne pas alourd
 === "Docker Compose (stack complète)"
 
     ```bash
-    make docker-build
     make docker-run
     ```
 
-    Démarre l'API, PostgreSQL, et toute la stack de monitoring (Prometheus, Loki, Alloy, Grafana — voir [Monitoring](../operations/monitoring.md)).
+    Build l'image, migre la base, puis démarre l'API, PostgreSQL, et toute la stack de monitoring (Prometheus, Loki, Alloy, Grafana — voir [Monitoring](../operations/monitoring.md)).
 
 === "Local (uvicorn)"
 
     ```bash
-    uv sync --extra api
+    make requirements
     make db-migrate
     make run
     ```
@@ -47,7 +47,7 @@ Groupes de dépendances additionnels, installés séparément pour ne pas alourd
 
 ## Variables d'environnement
 
-Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les scripts de drift, la stack de monitoring locale, ou le VPS de déploiement — jamais les mêmes secrets au même endroit deux fois. Lues via `pydantic-settings` (`src/api/infra/config.py`, fichier `.env` à la racine) pour les variables applicatives, ou directement par les scripts/workflows pour le reste. `.env.example` (local) et `deploy/.env.example` (VPS) documentent chaque valeur.
+Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les scripts de drift, la stack de monitoring locale, ou le VPS de déploiement — jamais les mêmes secrets au même endroit deux fois. Lues via `pydantic-settings` (`src/api/common/config.py`, fichier `.env` à la racine) pour les variables applicatives, ou directement par les scripts/workflows pour le reste. `.env.example` (local) et `deploy/.env.example` (VPS) documentent chaque valeur.
 
 !!! warning "Un `$` dans une valeur casse l'interpolation Docker Compose"
     Docker Compose interpole le `.env` qu'il lit (pour son propre `${VAR}` dans `compose.yml`) — un secret généré aléatoirement qui contient un `$` (un mot de passe, un token) y est donc lu comme le début d'une référence de variable, avec un avertissement `variable is not set` et une valeur tronquée au runtime. Entourer la valeur de guillemets simples suffit à la préserver telle quelle :
@@ -96,13 +96,14 @@ Quatre groupes, selon qui les lit : l'application elle-même au démarrage, les 
 
 ## Référence complète des commandes (`Makefile`)
 
-Tout ce qui précède se résume à quelques commandes `make` — la liste complète ci-dessous, regroupée par usage (général, analyse de drift, documentation). Les 20 commandes disponibles (`make help` régénère cette liste à partir des commentaires du `Makefile`, toujours à jour) :
+Tout ce qui précède se résume à quelques commandes `make` — la liste complète ci-dessous, regroupée par usage (général, analyse de drift, profiling, documentation). Les 24 commandes disponibles (`make help` régénère cette liste à partir des commentaires du `Makefile`, toujours à jour) :
 
 **Général**
 
 | Commande | Effet |
 |---|---|
 | `make requirements` | Installe les dépendances Python (API + dev) |
+| `make all-requirements` | Installe tous les groupes et extras (API + dev + drift + docs) — tout ce qu'il faut pour la suite de tests complète |
 | `make run` | Démarre l'API en local avec autoreload |
 | `make docker-build` | Build l'image Docker de l'API |
 | `make docker-run` | Build, migre, puis démarre la stack Docker complète |
@@ -125,6 +126,13 @@ Tout ce qui précède se résume à quelques commandes `make` — la liste compl
 | `make generate-drift-fixtures` | Génère la fixture k6 à intensité croissante |
 | `make generate-drift-report` | Analyse les prédictions récentes et écrit `reports/drift_report.html`/`drift_summary.md` |
 | `make load-test-drift` | Rejoue la fixture contre `BASE_URL` (~15 min ; `SLEEP_SECONDS=0` pour vitesse max) |
+
+**Profiling** (voir [Optimisation d'inférence (ONNX)](../operations/optimisation-inference.md))
+
+| Commande | Effet |
+|---|---|
+| `make profile-predict` | Profile le chemin de requête réel (écrit `reports/profiling/<label>_*`) |
+| `make plot-profile-comparison` | Génère un graphique de latence avant/après à partir de deux runs `profile-predict` |
 
 **Documentation**
 

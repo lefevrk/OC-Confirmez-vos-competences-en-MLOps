@@ -5,8 +5,8 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 
-from api.infra.auth import verify_basic_auth
-from api.infra.config import get_settings
+from api.common.auth import verify_basic_auth
+from api.common.config import get_settings
 
 router = APIRouter(prefix="/evidently", tags=["operations"])
 

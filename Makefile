@@ -13,10 +13,15 @@ PROJECT_NAME = OC-Confirmez-vos-competences-en-MLOps
 requirements:
 	uv sync --extra api
 
+## Install every dependency group and extra (API + dev + drift + docs) — everything needed to run the full test suite
+.PHONY: all-requirements
+all-requirements:
+	uv sync --all-groups --all-extras
+
 ## Run the API locally with autoreload
 .PHONY: run
 run:
-	uv run uvicorn api.main:app --reload
+	uv run uvicorn api.app:app --reload
 
 ## Build the API Docker image
 .PHONY: docker-build

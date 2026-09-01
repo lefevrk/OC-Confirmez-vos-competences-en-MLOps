@@ -21,7 +21,7 @@ Une ligne par tentative de scoring, définie dans `src/api/infra/postgres/models
 
 `probability`/`decision`/`inference_latency_ms` restent `null` sur une ligne en erreur : le modèle n'a jamais renvoyé de valeur à enregistrer (voir [Architecture](architecture.md#diagramme-de-classes), `PredictionEvent`).
 
-## Pourquoi PostgreSQL plutôt que MangoDB
+## Pourquoi PostgreSQL plutôt que MongoDB
 
 La table est mixte plus que documentaire : huit colonnes typées et indexées (`occurred_at`, `model_version`, `status`, `probability`...) pour une seule colonne réellement semi-structurée (`features`). Le JSONB donne la flexibilité "document" là où elle sert — un payload dont le schéma dépend du modèle, pas du code de l'API — sans sacrifier typage, contraintes et index sur le reste ; un store type MongoDB aurait imposé cette flexibilité à toute la table pour un gain nul ici, puisque `features` n'est jamais interrogé champ par champ, seulement relu en bloc pour le drift. Deux avantages concrets déjà exploités le confirment : la purge de rétention tourne en `pg_cron`, un job SQL planifié directement dans la base sans infrastructure supplémentaire, et l'analyse de drift lit directement via `pandas.read_sql` sans couche de traduction document → tabulaire.
 

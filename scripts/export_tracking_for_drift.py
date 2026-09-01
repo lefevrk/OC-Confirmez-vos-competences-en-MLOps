@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 import typer
 
-from api.infra.config import get_settings
+from api.common.config import get_settings
 from api.infra.postgres.models import PredictionEventRecord
 
 app = typer.Typer()

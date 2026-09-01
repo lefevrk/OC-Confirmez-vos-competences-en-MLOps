@@ -6,10 +6,10 @@ from typing import AsyncIterator
 from fastapi import FastAPI
 from loguru import logger
 
-from api.infra.config import get_settings
-from api.infra.logging import configure_logging
-from api.infra.metrics import MLFLOW_ERRORS, MODEL_INFO, POSTGRES_ERRORS
+from api.common.config import get_settings
 from api.infra.mlflow_model import load_champion
+from api.infra.observability.logging import configure_logging
+from api.infra.observability.metrics import MLFLOW_ERRORS, MODEL_INFO, POSTGRES_ERRORS
 from api.infra.postgres.tracking import connect_prediction_recorder
 
 

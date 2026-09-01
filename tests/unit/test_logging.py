@@ -5,7 +5,7 @@ import logging
 
 from loguru import logger
 
-from api.infra.logging import configure_logging
+from api.infra.observability.logging import configure_logging
 
 
 def test_configure_logging_emits_one_json_line_with_bound_fields(capsys) -> None:

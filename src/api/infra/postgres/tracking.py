@@ -7,7 +7,7 @@ from loguru import logger
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session
 
-from api.infra.config import Settings
+from api.common.config import Settings
 from api.infra.postgres.models import PredictionEventRecord
 from api.modules.scoring.domain.entities import PredictionEvent
 

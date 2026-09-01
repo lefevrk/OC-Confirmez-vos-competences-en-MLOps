@@ -10,7 +10,7 @@ Basic Auth, not for an arbitrary Bearer header.
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from api.infra.config import get_settings
+from api.common.config import get_settings
 
 basic_security = HTTPBasic(auto_error=False)
 
