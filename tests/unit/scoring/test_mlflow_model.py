@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from api.infra.config import Settings
+from api.common.config import Settings
 from api.infra.mlflow_model import MlflowScoringModel, load_champion
 
 

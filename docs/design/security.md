@@ -4,7 +4,7 @@
 
 `POST /predictions` et `GET /` (démo Gradio) sont **ouverts, sans authentification** — un choix délibéré pour ce projet d'évaluation : l'examinateur doit pouvoir tester l'API et la démo sans configurer le moindre secret. Ce n'est pas une recommandation pour un déploiement de production réel, où ces routes seraient protégées.
 
-Seul `GET /evidently` reste gardé, en HTTP Basic (`API_TOKEN`, voir [Installation & configuration](../getting-started/configuration.md)) — pop-up navigateur natif, nom d'utilisateur ignoré, seul le mot de passe compte (`src/api/infra/auth.py`, `verify_basic_auth`). `API_TOKEN` vide désactive cette dernière vérification aussi, pratique en local.
+Seul `GET /evidently` reste gardé, en HTTP Basic (`API_TOKEN`, voir [Installation & configuration](../getting-started/configuration.md)) — pop-up navigateur natif, nom d'utilisateur ignoré, seul le mot de passe compte (`src/api/common/auth.py`, `verify_basic_auth`). `API_TOKEN` vide désactive cette dernière vérification aussi, pratique en local.
 
 ## Gestion des secrets
 

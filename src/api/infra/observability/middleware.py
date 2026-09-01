@@ -5,7 +5,7 @@ import time
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from api.infra.metrics import HTTP_ERRORS, HTTP_LATENCY, HTTP_REQUESTS
+from api.infra.observability.metrics import HTTP_ERRORS, HTTP_LATENCY, HTTP_REQUESTS
 
 
 class ObservabilityMiddleware(BaseHTTPMiddleware):

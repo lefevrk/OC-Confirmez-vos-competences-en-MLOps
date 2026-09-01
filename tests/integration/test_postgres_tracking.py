@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.exc import DataError, OperationalError
 
-from api.infra.config import get_settings
+from api.common.config import get_settings
 from api.infra.postgres.models import PredictionEventRecord
 from api.infra.postgres.tracking import PostgresPredictionRecorder
 from api.modules.scoring.domain.entities import PredictionEvent
