@@ -18,9 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 
 ]
-dependencies = [
-    "python-dotenv",
-]
+dependencies = []
 requires-python = ">=3.10.0"
 
 [project.optional-dependencies]
@@ -114,6 +112,10 @@ dev = [
     # Renders the before/after comparison charts in
     # scripts/profiling/plot_comparison.py.
     "matplotlib",
+    # Loads .env for scripts/ entry points (drift, docs generation, ...) —
+    # same rationale as `typer` above: project-wide script tooling, not
+    # specific to `drift`, and never imported by src/api itself.
+    "python-dotenv",
 ]
 # Data drift analysis tooling (scripts/, notebooks/) — kept out of the
 # default dev sync so day-to-day API work doesn't pay Evidently's heavier

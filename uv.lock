@@ -1077,9 +1077,6 @@ toml = [
 name = "credit-scoring-api"
 version = "0.6.0"
 source = { editable = "." }
-dependencies = [
-    { name = "python-dotenv" },
-]
 
 [package.optional-dependencies]
 api = [
@@ -1111,6 +1108,7 @@ dev = [
     { name = "pyright" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "python-dotenv" },
     { name = "ruff" },
     { name = "snakeviz" },
     { name = "testcontainers" },
@@ -1144,7 +1142,6 @@ requires-dist = [
     { name = "prometheus-client", marker = "extra == 'api'" },
     { name = "psycopg2-binary", marker = "extra == 'api'" },
     { name = "pydantic-settings", marker = "extra == 'api'" },
-    { name = "python-dotenv" },
     { name = "sqlalchemy", marker = "extra == 'api'" },
     { name = "uvicorn", extras = ["standard"], marker = "extra == 'api'" },
 ]
@@ -1158,6 +1155,7 @@ dev = [
     { name = "pyright", specifier = ">=1.1.409" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "python-dotenv" },
     { name = "ruff", specifier = ">=0.14.14" },
     { name = "snakeviz" },
     { name = "testcontainers", extras = ["postgres"] },
