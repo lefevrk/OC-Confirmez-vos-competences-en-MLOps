@@ -9,7 +9,7 @@ from loguru import logger
 from api.bootstrap import lifespan
 from api.common.config import get_settings
 from api.common.error_handling import BaseModuleErrorHandler
-from api.infra.observability_middleware import ObservabilityMiddleware
+from api.infra.observability.middleware import ObservabilityMiddleware
 from api.modules.health.router import router as health_router
 from api.modules.monitoring.router import router as monitoring_router
 from api.modules.scoring.presentation.error_handler import ScoringErrorHandler  # noqa: F401

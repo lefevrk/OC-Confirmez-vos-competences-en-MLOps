@@ -7,7 +7,11 @@ from tests.payloads import valid_payload
 
 from api.app import app
 from api.common.config import get_settings
-from api.infra.metrics import INFERENCE_LATENCY, PREDICTION_DECISIONS, PREDICTION_SCORE
+from api.infra.observability.metrics import (
+    INFERENCE_LATENCY,
+    PREDICTION_DECISIONS,
+    PREDICTION_SCORE,
+)
 from api.infra.postgres.models import PredictionEventRecord
 from api.infra.postgres.tracking import PostgresPredictionRecorder
 from api.modules.scoring.presentation.schemas import PredictionRequest

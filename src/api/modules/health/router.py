@@ -35,7 +35,7 @@ def health() -> HealthResponse:
     include_in_schema=False,
 )
 def metrics() -> Response:
-    """Expose les métriques Prometheus définies dans `api.infra.metrics` au format texte.
+    """Expose les métriques Prometheus définies dans `api.infra.observability.metrics` au format texte.
 
     Scrapé en continu par Grafana Alloy (`prometheus.scrape`) — débit,
     latence et taux d'erreur HTTP, plus des métriques spécifiques au
