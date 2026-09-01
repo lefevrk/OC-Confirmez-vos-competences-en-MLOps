@@ -19,9 +19,6 @@ classifiers = [
 
 ]
 dependencies = [
-    "loguru",
-    "numpy",
-    "pandas",
     "python-dotenv",
 ]
 requires-python = ">=3.10.0"
@@ -40,6 +37,9 @@ api = [
     "prometheus-client",
     "gradio>=4.0,<6.0",
     "httpx",
+    "loguru",
+    "numpy",
+    "pandas",
 ]
 
 [tool.ruff]

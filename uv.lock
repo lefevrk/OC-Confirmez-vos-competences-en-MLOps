@@ -1078,11 +1078,6 @@ name = "credit-scoring-api"
 version = "0.6.0"
 source = { editable = "." }
 dependencies = [
-    { name = "loguru" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
-    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
-    { name = "pandas" },
     { name = "python-dotenv" },
 ]
 
@@ -1092,9 +1087,14 @@ api = [
     { name = "fastapi" },
     { name = "gradio" },
     { name = "httpx" },
+    { name = "loguru" },
     { name = "mlflow" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "onnxruntime", version = "1.24.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "onnxruntime", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pandas" },
     { name = "prometheus-client" },
     { name = "psycopg2-binary" },
     { name = "pydantic-settings" },
@@ -1136,11 +1136,11 @@ requires-dist = [
     { name = "fastapi", marker = "extra == 'api'" },
     { name = "gradio", marker = "extra == 'api'", specifier = ">=4.0,<6.0" },
     { name = "httpx", marker = "extra == 'api'" },
-    { name = "loguru" },
+    { name = "loguru", marker = "extra == 'api'" },
     { name = "mlflow", marker = "extra == 'api'" },
-    { name = "numpy" },
+    { name = "numpy", marker = "extra == 'api'" },
     { name = "onnxruntime", marker = "extra == 'api'" },
-    { name = "pandas" },
+    { name = "pandas", marker = "extra == 'api'" },
     { name = "prometheus-client", marker = "extra == 'api'" },
     { name = "psycopg2-binary", marker = "extra == 'api'" },
     { name = "pydantic-settings", marker = "extra == 'api'" },
