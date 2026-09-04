@@ -6,7 +6,11 @@ from loguru import logger
 import pytest
 
 from api.modules.scoring.domain.entities import PredictionEvent
-from api.modules.scoring.domain.errors import InvalidProbabilityError, PredictionPersistenceError
+from api.modules.scoring.domain.errors import (
+    InferenceError,
+    InvalidProbabilityError,
+    PredictionPersistenceError,
+)
 from api.modules.scoring.services.predict import predict
 
 
@@ -106,8 +110,9 @@ def test_predict_wraps_a_recorder_failure_on_success_in_a_domain_error() -> None
 def test_predict_records_a_failed_scoring_attempt() -> None:
     """An unexpected model crash is still recorded, with the fields it never reached unset."""
     recorder = FakeRecorder()
-    with pytest.raises(RuntimeError, match="model exploded"):
+    with pytest.raises(InferenceError) as excinfo:
         predict(CrashingModel(), recorder, {"feature": 1.0})
+    assert isinstance(excinfo.value.__cause__, RuntimeError)
 
     assert len(recorder.recorded) == 1
     event, features = recorder.recorded[0]
@@ -136,8 +141,9 @@ def test_predict_records_an_invalid_probability_as_a_failed_attempt() -> None:
 
 def test_predict_does_not_mask_the_original_error_when_recording_the_failure_also_fails() -> None:
     """A storage failure while recording a failed attempt must not hide the real error."""
-    with pytest.raises(RuntimeError, match="model exploded"):
+    with pytest.raises(InferenceError) as excinfo:
         predict(CrashingModel(), FakeRecorder(fails=True), {"feature": 1.0})
+    assert isinstance(excinfo.value.__cause__, RuntimeError)
 
 
 def test_predict_logs_the_completed_scoring_event() -> None:

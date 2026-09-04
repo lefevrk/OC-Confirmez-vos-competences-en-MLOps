@@ -260,8 +260,8 @@ def test_champion_model_is_loaded_once_across_requests(monkeypatch) -> None:
     assert load_count["value"] == 1
 
 
-def test_prediction_returns_a_generic_500_on_an_unexpected_model_error(monkeypatch) -> None:
-    """An unforeseen model crash is logged and answered, not left to propagate raw."""
+def test_prediction_returns_a_500_on_an_unexpected_model_error(monkeypatch) -> None:
+    """An unforeseen model crash is logged and answered as an inference domain error, not left to propagate raw."""
 
     class CrashingModel(DeterministicModel):
         """A model raising an error scoring never anticipates."""
@@ -273,4 +273,4 @@ def test_prediction_returns_a_generic_500_on_an_unexpected_model_error(monkeypat
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.post("/predictions", json=valid_payload())
     assert response.status_code == 500
-    assert response.json() == {"detail": "internal server error"}
+    assert response.json() == {"detail": "prediction failed"}
