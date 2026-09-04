@@ -12,7 +12,11 @@ if TYPE_CHECKING:
     from loguru import Logger
 
 from api.modules.scoring.domain.entities import Prediction, PredictionEvent
-from api.modules.scoring.domain.errors import InvalidProbabilityError, PredictionPersistenceError
+from api.modules.scoring.domain.errors import (
+    InferenceError,
+    InvalidProbabilityError,
+    PredictionPersistenceError,
+)
 from api.modules.scoring.ports.model import ScoringModel
 from api.modules.scoring.ports.prediction_recorder import PredictionRecorder
 
@@ -68,7 +72,7 @@ def predict(
             ),
             features,
         )
-        raise
+        raise InferenceError("The model failed to score the payload") from exc
 
     if not 0 <= probability <= 1:
         bound.bind(probability=probability).warning("invalid_probability_returned")
