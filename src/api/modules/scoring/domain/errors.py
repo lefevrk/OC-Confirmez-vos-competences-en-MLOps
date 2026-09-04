@@ -9,5 +9,9 @@ class InvalidProbabilityError(ScoringError):
     """Raised when a scoring model returns a value outside the probability range."""
 
 
+class InferenceError(ScoringError):
+    """Raised when the scoring model fails to produce a probability."""
+
+
 class PredictionPersistenceError(ScoringError):
     """Raised when a successful prediction could not be recorded."""

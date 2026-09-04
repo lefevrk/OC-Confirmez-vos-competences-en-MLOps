@@ -52,8 +52,8 @@ def get_recorder(request: Request) -> PredictionRecorder:
             'ou champ inconnu (`extra="forbid"`)'
         },
         500: {
-            "description": "Erreur inattendue du modèle, ou probabilité renvoyée hors de "
-            "l'intervalle [0, 1] (`InvalidProbabilityError`)"
+            "description": "Erreur inattendue du modèle (`InferenceError`), ou probabilité "
+            "renvoyée hors de l'intervalle [0, 1] (`InvalidProbabilityError`)"
         },
         503: {"description": "Modèle ou base de données indisponibles (échec au démarrage)"},
     },
